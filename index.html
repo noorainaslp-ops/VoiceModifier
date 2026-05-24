@@ -1,1 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Voice Recorder with Real-Time Effects</title>
 
+  <style>
+    body{
+      font-family: Arial, sans-serif;
+      background:#121212;
+      color:white;
+      text-align:center;
+      padding:30px;
+    }
+
+    .container{
+      max-width:700px;
+      margin:auto;
+      background:#1e1e1e;
+      padding:25px;
+      border-radius:20px;
+      box-shadow:0 0 20px rgba(0,0,0,0.4);
+    }
+
+    button{
+      padding:12px 20px;
+      margin:10px;
+      border:none;
+      border-radius:10px;
+      cursor:pointer;
+      font-size:16px;
+    }
+
+    .start{
+      background:#00c853;
+      color:white;
+    }
+
+    .stop{
+      background:#d50000;
+      color:white;
+    }
+
+    .play{
+      background:#2962ff;
+      color:white;
+    }
+
+    .controls{
+      margin-top:25px;
+      text-align:left;
+    }
+
+    label{
+      display:block;
+      margin-top:15px;
+      font-size:18px;
+    }
+
+    input[type="range"]{
+      width:100%;
+    }
+
+    .value{
+      font-weight:bold;
+      color:#00e5ff;
+    }
+
+    audio{
+      width:100%;
+      margin-top:20px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <h1>🎤 Voice Recorder & Modifier</h1>
+
+  <button class="start" onclick="startRecording()">Start Recording</button>
+  <button class="stop" onclick="stopRecording()">Stop Recording</button>
+  <button class="play" onclick="playModifiedAudio()">Play Modified Voice</button>
+
+  <audio id="audioPlayback" controls></audio>
+
+  <div class="controls">
+
+    <label>
+      Playback Speed:
+      <span class="value" id="rateValue">1</span>x
+    </label>
+    <input type="range" id="rate" min="0.5" max="3" step="0.1" value="1">
+
+    <label>
+      Pitch:
+      <span class="value" id="pitchValue">1</span>x
+    </label>
+    <input type="range" id="pitch" min="0.5" max="2" step="0.1" value="1">
+
+    <label>
+      Volume:
+      <span class="value" id="volumeValue">1</span>x
+    </label>
+    <input type="range" id="volume" min="0" max="3" step="0.1" value="1">
+
+    <label>
+      Delay Effect:
+      <span class="value" id="delayValue">0</span> sec
+    </label>
+    <input type="range" id="delay" min="0" max="2" step="0.1" value="0">
+
+  </div>
+
+</div>
+
+<script>
+
+let mediaRecorder;
+let audioChunks = [];
+let audioBlob;
+let audioURL;
+
+const audioElement = document.getElementById("audioPlayback");
+
+const rateSlider = document.getElementById("rate");
+const pitchSlider = document.getElementById("pitch");
+const volumeSlider = document.getElementById("volume");
+const delaySlider = document.getElementById("delay");
+
+rateSlider.oninput = () => {
+  document.getElementById("rateValue").innerText = rateSlider.value;
+};
+
+pitchSlider.oninput = () => {
+  document.getElementById("pitchValue").innerText = pitchSlider.value;
+};
+
+volumeSlider.oninput = () => {
+  document.getElementById("volumeValue").innerText = volumeSlider.value;
+};
+
+delaySlider.oninput = () => {
+  document.getElementById("delayValue").innerText = delaySlider.value;
+};
+
+async function startRecording() {
+
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+  mediaRecorder = new MediaRecorder(stream);
+
+  audioChunks = [];
+
+  mediaRecorder.ondataavailable = event => {
+    audioChunks.push(event.data);
+  };
+
+  mediaRecorder.onstop = () => {
+
+    audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+
+    audioURL = URL.createObjectURL(audioBlob);
+
+    audioElement.src = audioURL;
+  };
+
+  mediaRecorder.start();
+
+  alert("Recording Started");
+}
+
+function stopRecording() {
+
+  mediaRecorder.stop();
+
+  alert("Recording Stopped");
+}
+
+async function playModifiedAudio() {
+
+  if (!audioBlob) {
+    alert("Please record audio first");
+    return;
+  }
+
+  const audioContext = new AudioContext();
+
+  const arrayBuffer = await audioBlob.arrayBuffer();
+
+  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+  const source = audioContext.createBufferSource();
+
+  source.buffer = audioBuffer;
+
+  // Playback Speed
+  source.playbackRate.value = parseFloat(rateSlider.value);
+
+  // Pitch
+  source.detune.value = (parseFloat(pitchSlider.value) - 1) * 1200;
+
+  // Volume
+  const gainNode = audioContext.createGain();
+  gainNode.gain.value = parseFloat(volumeSlider.value);
+
+  // Delay
+  const delayNode = audioContext.createDelay(5.0);
+  delayNode.delayTime.value = parseFloat(delaySlider.value);
+
+  source.connect(gainNode);
+  gainNode.connect(delayNode);
+  delayNode.connect(audioContext.destination);
+
+  source.start(0);
+}
+
+</script>
+
+</body>
+</html>
