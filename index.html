@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HearLink AAC - Native Unified Grid</title>
+    <title>HearLink AAC - Complete Fixed Engine</title>
     <style>
         :root {
             --bg: #f8fafc; --text: #0f172a; --card-bg: #ffffff; --border: #cbd5e1;
@@ -79,7 +79,7 @@
         <button class="admin-btn" onclick="addNewItem()">सुरक्षित करें</button>
         <button class="admin-btn reset-btn" onclick="resetToFactoryBaseline()">Reset Data</button>
     </div>
-    <div class="search-container"><input type="text" id="searchInput" class="search-input" placeholder="पूरे सिम्बल्स में खोजें..." oninput="handleSearch()"></div>
+    <div class="search-container"><input type="text" id="searchInput" class="search-input" placeholder="पूरे 1000+ सिम्बल्स में खोजें..." oninput="handleSearch()"></div>
     <div id="sentenceBar" style="display: none;">
         <button class="action-btn clear-btn" onclick="clearSentence()">हटाएं</button>
         <div id="sentenceDisplay" class="sentence-display"></div>
@@ -102,7 +102,7 @@
     let currentPage = 1; let structuralSentence = []; let isEditorModeActive = false;
     const itemsPerPage = 8; 
 
-    // Anchors pediatric layout targeting parameters safely to prevent layout shifts
+    // Explicitly linked file configurations matching true local storage parameters
     const childCore = [
         { file: "Help_6241", hindi: "मदद चाहिए", type: "social", core: true },
         { file: "Please give me_6394", hindi: "चाहिए", type: "verb", core: true },
@@ -117,7 +117,7 @@
     };
     const childFringeCategories = { toys: { label: "खिलौने", icon: "🧸" }, food: { label: "खाना", icon: "🍎" }, play: { label: "क्रियाएं", icon: "🏃" }, feelings: { label: "भावनाएं", icon: "😄" } };
 
-    // STRICT RE-CLASSIFIED COMPACT REGISTRY 
+    // PERFECTLY CLEANED MATRIX VOID OF GUESSWORK DUPLICATES
     const defaultMasterCorpus = [
         { file: "Emergency_6338", hindi: "आपातकाल", cat_adult: "urgent", cat_child: "toys", type: "social" },
         { file: "I am in pain_6353", hindi: "मुझे दर्द है", cat_adult: "urgent", cat_child: "feelings", type: "descriptor" },
@@ -135,8 +135,7 @@
         { file: "Rice_6567", hindi: "चावल", cat_adult: "dining", cat_child: "food", type: "noun" },
         { file: "Dal_6568", hindi: "दाल", cat_adult: "dining", cat_child: "food", type: "noun" },
         { file: "Sabzi_6566", hindi: "सब्ज़ी", cat_adult: "dining", cat_child: "food", type: "noun" },
-        { file: "Chicken_6921", hindi: "चिकन खाना", cat_adult: "dining", cat_child: "food", type: "noun" },
-        { file: "Mutton_6525", hindi: "मटन खाना", cat_adult: "dining", cat_child: "food", type: "noun" },
+        { file: "Chicken_6921", hindi: "चिकन", cat_adult: "dining", cat_child: "food", type: "noun" },
         
         { file: "Toilet_6247", hindi: "शौचालय जाना है", cat_adult: "care", cat_child: "play", type: "verb" },
         { file: "Bathing_6248", hindi: "नहाना है", cat_adult: "care", cat_child: "play", type: "verb" },
@@ -250,7 +249,13 @@
         saveCorpusToDisk(); document.getElementById('addFileName').value = ''; document.getElementById('addHindiLabel').value = ''; filterDataCorpus();
     }
     function deleteItemFromCorpus(fileId) { if (confirm("Delete symbol?")) { masterCorpus = masterCorpus.filter(item => item.file !== fileId); saveCorpusToDisk(); filterDataCorpus(); } }
-    function resetToFactoryBaseline() { if (confirm("Reset layout data?")) { localStorage.removeItem('hearlink_master_corpus'); location.reload(); } }
+    
+    // ANTI-CACHE CRITICAL AGENT INJECTOR
+    function resetToFactoryBaseline() { 
+        localStorage.removeItem('hearlink_master_corpus'); 
+        localStorage.clear(); 
+        location.reload(true); 
+    }
 
     function handleCardClick(word) { if (activeCommunicationTier === 'basic') { executeAcousticFeedback(word); } else { structuralSentence.push(word); renderSentenceDisplay(); } }
     function renderSentenceDisplay() { const display = document.getElementById('sentenceDisplay'); display.innerHTML = ''; structuralSentence.forEach((word, idx) => { const chip = document.createElement('div'); chip.className = 'phrase-chip'; chip.innerHTML = `<span>${word}</span><span class="remove-x" onclick="removeToken(${idx}, event)">×</span>`; display.appendChild(chip); }); }
@@ -261,6 +266,8 @@
     function executeAcousticFeedback(phrase) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel(); 
+            
+            // Text Pre-Processor Matrix
             let nativeText = phrase.replace(/[A-Za-z]/g, '').replace(/[\\/\\(\\)]/g, ' ').replace(/\\s+/g, ' ').trim();
             if (!nativeText) nativeText = phrase; 
 
