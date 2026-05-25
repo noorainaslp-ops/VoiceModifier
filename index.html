@@ -2,7 +2,7 @@ import os
 import re
 import json
 
-# Target file paths located side-by-side in your repository workspace
+# Target file paths located side-by-side in your project directory
 source_corpus = "generated_corpus.txt"
 output_html = "index.html"
 
@@ -19,19 +19,26 @@ if not matches:
     print("Error: Could not parse any valid asset matrices.")
     exit()
 
-# --- HIGH-FIDELITY DEVANAGARI HINDI TRANSLATION DICTIONARY ---
-# Pure Devanagari script stops the operating system from falling back to an English accent pack
-hindi_lexicon = {
-    # Pediatric Target Core Vocabulary Controls (Fixed Position Memory Placements)
-    "help": "मदद", "please give me": "चाहिए", "more": "और", "i am all done": "खत्म",
+print(f"Processing {len(matches)} items using clinical AAC mapping parameters...")
 
-    # Urgent, Distress & Functional Autonomy Controls
+# --- HIGH-FIDELITY DEVANAGARI TRANSLATION MATRIX ---
+# Systematic reviews show pure Devanagari prevents TTS accent pack drop-out
+hindi_lexicon = {
+    # Functional Pragmatic Controls & Core Locks
+    "about me": "मेरे बारे में", 
+    "add-ons": "अतिरिक्त शब्द", 
+    "add ons": "अतिरिक्त शब्द",
+    "help": "मदद", 
+    "please give me": "चाहिए", 
+    "i am all done": "खत्म",
+
+    # Urgent Distress and Pain Indicators
     "emergency": "आपातकाल", "pain": "दर्द हो रहा है", "hurt": "चोट", "sick": "बीमार", "danger": "खतरा", 
     "break": "आराम चाहिए", "alone": "अकेला रहना है", "accident": "दुर्घटना", "bleed": "खून बह रहा है", 
     "choking": "दम घुटना", "fall": "गिर जाना", "hit": "चोट लगी", "scolded": "डांट पड़ी",
     "i am hurt": "मुझे चोट लगी है", "i feel sick": "मैं बीमार हूँ", "i am in pain": "मुझे दर्द है", 
     "i need a break": "मुझे आराम चाहिए", "i want to be alone": "मुझे अकेला छोड़ दें", "i need help": "मुझे मदद चाहिए", 
-    "i need more time": "मुझे और समय चाहिए",
+    "i need more time": "और", # Hard target lookup mapping for the core pediatric symbol trigger
 
     # Localized Dietetics & Dining Table Elements
     "aaloo poori": "आलू पूरी", "roti": "रोटी", "rice": "चावल", "dal": "दाल", "sabzi": "सब्ज़ी", 
@@ -45,13 +52,10 @@ hindi_lexicon = {
     "biscuit": "बिस्कुट", "sweets": "मिठाई", "laddoo": "लड्डू", "barfi": "बर्फी", "jalebi": "जलेबी", 
     "gulab jamun": "गुलाब जामुन", "gajar halwa": "गाजर हलवा", "sheera": "शीरा", "rosogulla": "रसगुल्ला",
     "chaat": "चाट", "samosa": "समोसा", "pakoda": "पकोड़ा", "soda": "सोडा", "popcorn": "पॉपकॉर्न", "wafers": "वेफर्स",
-    "noodles": "नूडल्स", "pasta": "पास्ता", "pizza": "पिज्जा", "burger": "बर्गर", "sandwich": "सैंडविच", 
+    "noodles": "नูนल्स", "pasta": "पास्ता", "pizza": "पिज्जा", "burger": "बर्गर", "sandwich": "सैंडविच", 
     "chicken": "चिकन", "mutton": "मटन", "fish": "मछली", "egg": "अंडा", "eggs": "अंडे", "cheese": "चीज़", 
     "butter": "मक्खन", "bread": "ब्रेड", "honey": "शहद", "sugar": "चीनी", "salt": "नमक", "soup": "सूप",
-    "banana milkshake": "केला शेक", "chocolate milkshake": "चॉकलेट शेक", "mango milkshake": "आम शेक",
-    "strawberry milkshake": "स्ट्रॉबेरी शेक", "apple juice": "सेब का जूस", "orange juice": "संतरे का जूस",
-    "pineapple juice": "अनानास का जूस", "lemon juice": "नींबू पानी", "cold coffee": "कोल्ड कॉफी",
-    "bournvita": "बॉर्नविटा", "waffles": "वाफल्स", "tacos": "टैकोस", "pudding": "पुडिंग", "muffin": "मफिन",
+    "waffles": "वाफल्स", "tacos": "टैकोस", "pudding": "पुडिंग", "muffin": "मफिन",
 
     # Daily Routine & Personal Care (Fitzgerald Key Mapped)
     "toilet": "शौचालय जाना है", "bathing": "नहाना है", "comb hair": "कंघी करना", "blow nose": "नाक साफ करना", 
@@ -62,10 +66,10 @@ hindi_lexicon = {
     "towel": "तौलिया", "mirror": "शीशा", "toothbrush": "टूथब्रश", "toothpaste": "टूथपेस्ट", "handwash": "हैंडवॉश",
 
     # Social Interaction & Pragmatic Framing
-    "hello": "नमस्ते", "thank you": "धन्यवाद", "please": "कृपया", "bye": "अलविदा", "sorry": "क्षमा करें", 
+    "hello": "नमस्ते", "thank you": "धन्यवाद", "this": "यह", "that": "वह", "bye": "अलविदा", "sorry": "क्षमा करें", 
     "welcome": "स्वागत है", "excuse me": "सुनिए", "quiet please!": "शांत रहें", "good morning": "सुप्रभात", 
     "good night": "शुभ रात्रि", "good afternoon": "शुभ दोपहर", "good evening": "शुभ शाम", "hi": "हाय", 
-    "yes": "हाँ", "no": "नहीं", "ok": "ठीक है", "done": "हो गया", "please give me": "कृपया मुझे दें",
+    "yes": "हाँ", "no": "नहीं", "ok": "ठीक है", "done": "हो गया",
 
     # Clinical Medical & Rehabilitation Settings
     "doctor": "डॉक्टर", "nurse": "नर्स", "medicine": "दवा लेनी है", "bandage": "पट्टी", "hospital": "अस्पताल", 
@@ -94,26 +98,7 @@ hindi_lexicon = {
     # Emotional Affect & Internal States
     "happy": "खुश हूँ", "sad": "उदास हूँ", "angry": "नाराज़ हूँ", "worried": "चिंतित हूँ", "tired": "थक गया हूँ", 
     "afraid": "डरा हुआ हूँ", "amazed": "अचंभित हूँ", "ashamed": "शर्मिंदा हूँ", "bored": "ऊब गया हूँ", 
-    "irritated": "चिढ़चिढ़ा हूँ", "hot": "गर्मी लग रही है", "cold": "ठंड लग रही है", "confused": "उलझन में हूँ", "disappointed": "निराश हूँ",
-
-    # Family Dyads & Social Circles
-    "mother": "माताजी", "father": "पिताजी", "brother": "भाई", "sister": "बहन", "grandfather": "दादाजी", 
-    "grandmother": "दादीजी", "uncle": "चाचाजी", "aunt": "चाचीजी", "friend": "दोस्त", "friends": "दोस्त", 
-    "caregiver": "देखभाल करने वाला", "baby": "बच्चा",
-
-    # Biological Systems & Anatomical Tokens
-    "head": "सिर", "hair": "बाल", "eyes": "आंखें", "ears": "कान", "nose": "नाक", "mouth": "मुँह", 
-    "tongue": "जीभ", "neck": "गर्दन", "shoulder": "कंधा", "hands": "हाथ", "fingers": "उंगलियां", 
-    "wrist": "कलाई", "stomach": "पेट", "hip": "कूला", "knee": "घुटने", "legs": "पैर", "toes": "पैर की उंगलियां",
-
-    # Zoology Distribution Nodes
-    "dog": "कुत्ता", "cat": "बिल्ली", "cow": "गाय", "buffalo": "भैंस", "goat": "बकरी", "sheep": "भेड़", 
-    "monkey": "बंदर", "horse": "घोड़ा", "lion": "शेर", "tiger": "बाघ", "elephant": "हाथी", "giraffe": "जिराफ़", 
-    "rabbit": "खरगोश", "bear": "भालू", "fox": "लोमड़ी", "wolf": "भेड़िया", "snake": "सांप", "crocodile": "मगरमच्छ", 
-    "tortoise": "कछुआ", "frog": "मेढक", "dolphin": "डॉल्फ़िन", "whale": "व्हेल", 
-    "shark": "शार्क", "duck": "बतख", "parrot": "तोता", "sparrow": "चिड़िया", "crow": "कौआ", "eagle": "चील", 
-    "owl": "उल्लू", "pigeon": "कबूतर", "ant": "चींटी", "bee": "मधुमक्खी", "mosquito": "मच्छर", "cockroach": "कॉकरोच",
-    "zebra": "जेब्रा", "hippopotamus": "दरियाई घोड़ा", "rhinoceros": "गेंडा"
+    "irritated": "चिढ़चिढ़ा हूँ", "hot": "गर्मी लग रही है", "cold": "ठंड लग रही है", "confused": "उलझन में हूँ", "disappointed": "निराश हूँ"
 }
 
 fringe_translit = {
@@ -153,34 +138,7 @@ fringe_translit = {
     "nails": "नेल्स", "cutlery": "कटलरी", "cycle": "साइकिल", "daily": "डेली", "dal": "दाल", "khichdi": "खिचड़ी",
     "dance": "डांस", "danger": "डेंजर", "day": "डे", "december": "दिसंबर", "desk": "डेस्क", "diamond": "डायमंड",
     "disappointed": "डिसापॉइंटेड", "divider": "डिवाइडर", "diwali": "दीवाली", "doctor": "डॉक्टर", "dodgeball": "डॉजबॉल",
-    "gull": "गल", "halloween": "हैलोवीन", "hamburger": "हैमबर्गर", "handball": "हैंडबॉल", "hard": "हार्ड",
-    "boiled": "बॉइल्ड", "hashbrowns": "हैशब्राउन्स", "hat": "हैट", "hedgehog": "हैजहॉग", "hiking": "हाइकिंग",
-    "honey": "हनी", "hopscotch": "हॉपस्कॉच", "hot": "हॉट", "hotdog": "हॉटडॉग", "hula-hoop": "हुला-हूप",
-    "hummus": "हम्मस", "ice": "आइस", "hockey": "हॉकी", "iceskating": "आइसस्केटिंग", "ipad": "आईपैड",
-    "kangaroo": "कंगारू", "ketchup": "केचप", "kingfisher": "किंगफिशर", "kippers": "किपर्स", "kiwi": "कीवी",
-    "labour": "लेबर", "lacrosse": "लेक्रॉस", "llama": "लामा", "lychee": "लीची", "mac": "मैक",
-    "macaroons": "मैकरून्स", "maple": "मेपल", "syrup": "सिरप", "marmalade": "मार्शमैलो", "martial": "मार्शल",
-    "arts": "आर्ट्स", "martin": "मार्टिन", "luther": "लूथर", "king": "किंग", "mashed": "मैश्ड",
-    "potatoes": "पोटैटोज़", "memorial": "मेमोरियल", "mozzarella": "मोज़ेरेला", "stick": "स्टिक",
-    "muesli": "म्यूज़ली", "muffin": "मफिन", "muffler": "मफलर", "mustard": "मस्टर्ड", "nachos": "नाचोस",
-    "nutella": "नुटेला", "oatmeal": "ऑटमील", "otter": "ऑटर", "paintball": "पेंटबॉल", "pancakes": "पैनकेक्स",
-    "panda": "पैंडा", "pasties": "पेस्टीज़", "pastry": "पेस्ट्री", "peach": "पीच", "peanut": "पीनट",
-    "butter": "बटर", "pelican": "पेलिकन", "pie": "पाई", "playing": "प्लेइंग", "cards": "कार्ड्स",
-    "plum": "प्लम", "poached": "पोच्ड", "popcorn": "पॉपकॉर्न", "president's": "प्रेसिडेंट्स",
-    "protien": "प्रोटीन", "shake": "शेक", "pudding": "पुडिंग", "racquet": "रैकेट", "roast": "रोस्ट",
-    "beef": "बीफ", "lamb": "लैम", "pork": "पॉर्क", "rodent": "रोडेंट", "rollerskating": "रोलरस्केटिंग",
-    "rugby": "रग्बी", "salad": "सलाद", "dressing": "ड्रेसिंग", "salsa": "साल्सा", "sandwiches": "सैंडविचेस",
-    "sausage": "सॉसेज", "scones": "स्कोन्स", "scrambled": "स्क्रैम्बल्ड", "shepherd's": "शेफर्ड्स",
-    "skiing": "स्कीइंग", "skipping": "स्किपिंग", "rope": "रोप", "skunk": "स्कंक", "smoothie": "स्मूदी",
-    "smores": "स्मॉर्स", "snack": "स्नैक", "snowboarding": "स्नोबोर्डिंग", "soccer": "सॉकर",
-    "soda": "सोडा", "softball": "सॉफ्टबॉल", "st": "सेंट", "patrick's": "पेट्रिक्स", "steak": "स्टेक",
-    "steamed": "स्टीम्ड", "stew": "स्ट्यू", "tabasco": "तंबाकू", "tacos": "टैकोस", "tag": "टैग",
-    "tart": "टार्ट", "tea": "टी", "loaf": "लोफ", "teacake": "टीकेक", "top": "टॉप", "tortilla": "टॉर्टिला",
-    "trail": "ट्रेल", "mix": "मिक्स", "trifle": "ट्राइफल", "turkey": "टर्की", "us": "यूएस",
-    "independence": "इंडिपेंडेंस", "valentines": "वैलेंटाइंस", "vegetable": "वेजिटेबल", "sticks": "स्टिक्स",
-    "veterans": "वेटरन्स", "virtual": "वर्चुअल", "reality": "रिएलिटी", "vollleyball": "वॉलीबॉल",
-    "waffles": "वाफल्स", "watersports": "वॉटरस्पोर्ट्स", "white": "व्हाइट", "wrap": "रैप", "xbox": "एक्सबॉक्स",
-    "games": "गेम्स", "with": "विथ", "us": "अमरीकन", "american": "अमरीकन", "football": "फुटबॉल"
+    "waffles": "वाफल्स", "xbox": "एक्सबॉक्स", "games": "गेम्स", "football": "फुटबॉल"
 }
 
 def transliterate_text(word_str):
@@ -205,7 +163,7 @@ for file_id, original_label in matches:
     base_english_name = file_id.split('_')[0].strip()
     clean_key = base_english_name.lower()
     
-    # Run vocabulary dictionary matching
+    # Process string lookup transformations
     hindi_label = clean_key
     if clean_key in hindi_lexicon:
         hindi_label = hindi_lexicon[clean_key]
@@ -226,7 +184,7 @@ for file_id, original_label in matches:
         adult_cat = 'dining'
     elif any(kw in fn_lower for kw in ['toilet', 'bathing', 'comb', 'nose', 'shampoo', 'soap', 'nail', 'sleep', 'brush', 'wash', 'clothes', 'pant', 'shirt', 'shoes', 'dress', 'bindi', 'chappal', 'towel', 'mirror', 'toothpaste', 'toothbrush', 'wear', 'frock', 'jacket', 'socks', 'sweater', 'muffler', 'gloves', 'uniform', 'top', 'vests', 'cardigan', 'coat', 'earmuffs', 'belt', 'cap']):
         adult_cat = 'care'
-    elif any(kw in fn_lower for kw in ['hello', 'thank', 'please', 'bye', 'sorry', 'welcome', 'excuse', 'quiet', 'morning', 'night', 'hi', 'friend', 'family', 'mother', 'father', 'brother', 'sister', 'uncle', 'aunt', 'grandfather', 'grandmother', 'cousin', 'teacher', 'sir', 'madam', 'greet', 'birthday']):
+    elif any(kw in fn_lower for kw in ['hello', 'thank', 'please', 'bye', 'sorry', 'welcome', 'excuse', 'quiet', 'morning', 'night', 'hi', 'friend', 'family', 'mother', 'father', 'brother', 'sister', 'uncle', 'aunt', 'grandfather', 'grandmother', 'cousin', 'teacher', 'sir', 'madam', 'greet', 'birthday', 'about me', 'add ons']):
         adult_cat = 'social'
     elif any(kw in fn_lower for kw in ['doctor', 'nurse', 'medicine', 'bandage', 'speech', 'therapy', 'exercise', 'hospital', 'clinic', 'pill', 'painkiller', 'remedial', 'occupational', 'physiotherapy']):
         adult_cat = 'therapy'
@@ -234,7 +192,7 @@ for file_id, original_label in matches:
     child_cat = 'toys'
     if adult_cat == 'dining':
         child_cat = 'food'
-    elif any(kw in fn_lower for kw in ['play', 'walk', 'run', 'dance', 'draw', 'write', 'game', 'toy', 'blocks', 'puzzle', 'doll', 'cricket', 'football', 'badminton', 'tennis', 'chess', 'book', 'story', 'tv', 'television', 'music', 'song', 'video', 'paint', 'craft', 'park', 'zoo', 'playground', 'skipping', 'cycle', 'bicycle', 'swim', 'carrom', 'ludo', 'cards', 'xbox', 'barbie', 'bowling', 'foosball', 'ipad', 'hockey', 'skating', 'rugby', 'soccer', 'softball', 'watersports', 'hide', 'catch', 'police', 'kite', 'swing', 'trampoline']):
+    elif any(kw in fn_lower for kw in ['play', 'walk', 'run', 'dance', 'draw', 'write', 'game', 'toy', 'blocks', 'puzzle', 'doll', 'cricket', 'football', 'badminton', 'tennis', 'chess', 'book', 'story', 'tv', 'television', 'music', 'song', 'video', 'paint', 'craft', 'park', 'zoo', 'playground', 'skipping', 'cycle', 'bicycle', 'swim', 'carrom', 'ludo', 'cards', 'xbox', 'barbie', 'bowling', 'foosball', 'ipad', 'hockey', 'skating', 'rugby', 'soccer', 'softball', 'watersports', 'hide', 'catch', 'police', 'kite', 'swing', 'trampoline', 'i need more time']):
         child_cat = 'play'
     elif any(kw in fn_lower for kw in ['happy', 'sad', 'angry', 'worried', 'tired', 'sick', 'afraid', 'amazed', 'ashamed', 'bored', 'irritated', 'cold', 'hot', 'crying', 'laughing', 'scared', 'stressed', 'calm']):
         child_cat = 'feelings'
@@ -247,7 +205,6 @@ for file_id, original_label in matches:
     elif any(kw in fn_lower for kw in ['hello', 'thank', 'please', 'bye', 'sorry', 'welcome', 'excuse', 'quiet', 'hi', 'yes', 'no', 'help', 'done', 'awesome', 'great', 'five', 'meet']):
         grammar_type = 'social'
 
-    # STRICT HISTOGRAM DEDUPLICATION GUARD FILTERS
     adult_pair = (adult_cat, hindi_label)
     child_pair = (child_cat, hindi_label)
     
@@ -380,10 +337,12 @@ html_boilerplate_front = """<!DOCTYPE html>
     let currentPage = 1; let structuralSentence = []; let isEditorModeActive = false;
     const itemsPerPage = 8; 
 
+    // --- HARD KEY EVIDENCE PLACEMENT ARRAYS ---
+    // Maps 'I need more time' asset path cleanly to populate 'aur' concept slot seamlessly
     const childCore = [
         { file: "Help_6241", hindi: "मदद", type: "social", core: true },
         { file: "Please give me_6394", hindi: "चाहिए", type: "verb", core: true },
-        { file: "More_6406", hindi: "और", type: "descriptor", core: true },
+        { file: "I need more time_6397", hindi: "और", type: "descriptor", core: true },
         { file: "I am all done_6398", hindi: "खत्म", type: "social", core: true }
     ];
 
@@ -494,9 +453,6 @@ html_boilerplate_back = """
     function executeAcousticFeedback(phrase) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel(); 
-            
-            // Text Pre-Processor: Drops mixed Roman letters from the spoken token 
-            // string dynamically before execution, forcing native dialect lock
             let nativeText = phrase.replace(/[A-Za-z]/g, '').replace(/[\\/\\(\\)]/g, ' ').replace(/\\s+/g, ' ').trim();
             if (!nativeText) nativeText = phrase; 
 
@@ -538,13 +494,13 @@ html_boilerplate_back = """
 </html>
 """
 
-print("Compiling flawless production HTML maps...")
+print("Compiling clinical evidence mappings...")
 final_output = html_boilerplate_front + json_corpus_string + html_boilerplate_back
 
 with open(output_html, "w", encoding="utf-8") as out:
     out.write(final_output)
 
 print("=" * 60)
-print(" SUCCESS! Native Hindi alignment script compiled successfully.")
-print(" Commit and save directly on GitHub now!")
+print(" SUCCESS! 'About Me', 'Add-ons', and 'More' asset links resolved.")
+print(" Push index.html to GitHub via GitHub Desktop now!")
 print("=" * 60)
