@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HearLink AAC - Complete Fixed Engine</title>
+    <title>HearLink AAC - Production Fixed Grid</title>
     <style>
         :root {
             --bg: #f8fafc; --text: #0f172a; --card-bg: #ffffff; --border: #cbd5e1;
             --primary: #0284c7; --primary-light: #e0f2fe; --urgent-color: #ef4444;
-            --editor-color: #a855f7; --editor-light: #f3e8ff;
             --fitz-social: #ffffff; --fitz-verb: #dcfce7; --fitz-descriptor: #e0f2fe; --fitz-noun: #fef9c3;
         }
         body { font-family: system-ui, -apple-system, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; user-select: none; }
@@ -20,15 +19,9 @@
         .toggle-btn { padding: 6px 14px; border: none; background: transparent; font-weight: 800; font-size: 0.9rem; border-radius: 8px; cursor: pointer; color: #64748b; transition: all 0.15s; }
         .toggle-btn.active { background: var(--primary); color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         #pop-adult.active { background: #0284c7; } #pop-child.active { background: #eab308; }
-        .ed-toggle { border-color: var(--border); } .ed-toggle.active { background: var(--editor-color); color: white; }
         .search-container { padding: 8px 20px; background: var(--card-bg); border-bottom: 2px solid var(--border); }
         .search-input { width: 100%; padding: 10px; border: 2px solid var(--border); border-radius: 10px; font-size: 1rem; font-weight: 700; box-sizing: border-box; }
         .search-input:focus { border-color: var(--primary); outline: none; }
-        #adminPanel { background: var(--editor-light); padding: 12px 20px; border-bottom: 3px solid var(--editor-color); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; box-sizing: border-box; }
-        .admin-input { padding: 8px 12px; border: 2px solid var(--border); border-radius: 8px; font-weight: 600; font-size: 0.95rem; }
-        .admin-input:focus { outline: none; border-color: var(--editor-color); }
-        .admin-btn { background: var(--editor-color); color: white; border: none; padding: 8px 16px; font-weight: 800; border-radius: 8px; cursor: pointer; }
-        .reset-btn { background: #64748b; margin-left: auto; }
         #sentenceBar { background: var(--card-bg); border-bottom: 2px solid var(--border); padding: 10px 20px; display: flex; gap: 12px; align-items: center; min-height: 75px; box-sizing: border-box; }
         .sentence-display { flex: 1; background: var(--bg); border: 2px dashed var(--border); border-radius: 14px; min-height: 50px; display: flex; align-items: center; padding: 4px 12px; gap: 8px; overflow-x: auto; }
         .phrase-chip { background: var(--primary-light); color: var(--primary); padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 1rem; display: flex; align-items: center; gap: 6px; }
@@ -41,10 +34,11 @@
         .cat-btn.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
         #cat-urgent.active { background: #fee2e2; border-color: var(--urgent-color); color: var(--urgent-color); }
         .grid-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        /* STRICT 2x4 FORMAT GRID SYSTEM BOUNDARIES */
         .aac-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); gap: 15px; flex: 1; max-height: 480px; }
         .aac-card { background: var(--card-bg); border: 3px solid var(--border); border-radius: 20px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; aspect-ratio: 1 / 1; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.01); text-align: center; box-sizing: border-box; position: relative; }
         .aac-card:active { transform: scale(0.95); }
-        .del-badge { position: absolute; top: -6px; right: -6px; background: var(--urgent-color); color: white; width: 24px; height: 24px; border-radius: 50%; font-weight: 900; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); cursor: pointer; z-index: 10; }
         .aac-image { width: 70%; height: 70%; object-fit: contain; pointer-events: none; }
         .aac-label { font-size: 1.1rem; font-weight: 900; line-height: 1.2; margin-top: 4px; }
         .pagination-bar { display: flex; justify-content: center; align-items: center; gap: 20px; padding-top: 10px; border-top: 2px solid #e2e8f0; }
@@ -61,25 +55,14 @@
                 <button id="pop-adult" class="toggle-btn active" onclick="setPopulation('adult')">वयस्क (Adult)</button>
                 <button id="pop-child" class="toggle-btn" onclick="setPopulation('child')">बच्चे (Child)</button>
             </div>
-            <button id="btnEditorToggle" class="toggle-btn ed-toggle" onclick="toggleEditorMode()">⚙️ संपादक मोड</button>
+            <button class="toggle-btn" style="border:2px solid var(--border);" onclick="resetToFactoryBaseline()">🔄 रीसेट डेटा (Reset)</button>
         </div>
         <div class="toggle-group">
             <button id="tier-basic" class="toggle-btn active" onclick="setCommunicationTier('basic')">सरल मोड</button>
             <button id="tier-advanced" class="toggle-btn" onclick="setCommunicationTier('advanced')">बातचीत मोड</button>
         </div>
     </header>
-    <div id="adminPanel" style="display: none;">
-        <span style="font-weight:800; color:var(--editor-color);">➕ नया सिम्बल:</span>
-        <input type="text" id="addFileName" class="admin-input" placeholder="फ़ाइल आईडी">
-        <input type="text" id="addHindiLabel" class="admin-input" placeholder="हिंदी नाम">
-        <select id="addChildType" class="admin-input" style="display:none;">
-            <option value="noun">Noun (पीला)</option><option value="verb">Verb (हरा)</option>
-            <option value="descriptor">Modifier (नीला)</option><option value="social">Social (सफ़ेद)</option>
-        </select>
-        <button class="admin-btn" onclick="addNewItem()">सुरक्षित करें</button>
-        <button class="admin-btn reset-btn" onclick="resetToFactoryBaseline()">Reset Data</button>
-    </div>
-    <div class="search-container"><input type="text" id="searchInput" class="search-input" placeholder="पूरे 1000+ सिम्बल्स में खोजें..." oninput="handleSearch()"></div>
+    <div class="search-container"><input type="text" id="searchInput" class="search-input" placeholder="सिम्बल्स में खोजें..." oninput="handleSearch()"></div>
     <div id="sentenceBar" style="display: none;">
         <button class="action-btn clear-btn" onclick="clearSentence()">हटाएं</button>
         <div id="sentenceDisplay" class="sentence-display"></div>
@@ -99,15 +82,15 @@
 <script>
     let activePopulation = 'adult'; let activeCommunicationTier = 'basic'; 
     let currentCategory = 'urgent'; let activeItemsList = [];
-    let currentPage = 1; let structuralSentence = []; let isEditorModeActive = false;
+    let currentPage = 1; let structuralSentence = [];
     const itemsPerPage = 8; 
 
-    // Explicitly linked file configurations matching true local storage parameters
+    // Fixed child core elements mapping 'More time' directly to secure a valid layout graphic
     const childCore = [
-        { file: "Help_6241", hindi: "मदद चाहिए", type: "social", core: true },
-        { file: "Please give me_6394", hindi: "चाहिए", type: "verb", core: true },
-        { file: "I need more time_6397", hindi: "और चाहिए", type: "descriptor", core: true },
-        { file: "I am all done_6398", hindi: "खत्म", type: "social", core: true }
+        { file: "Help_6241", hindi: "मदद चाहिए", type: "social" },
+        { file: "Please give me_6394", hindi: "चाहिए", type: "verb" },
+        { file: "More time_6406", hindi: "और चाहिए", type: "descriptor" },
+        { file: "I am all done_6398", hindi: "खत्म", type: "social" }
     ];
 
     const adultCategories = {
@@ -117,8 +100,9 @@
     };
     const childFringeCategories = { toys: { label: "खिलौने", icon: "🧸" }, food: { label: "खाना", icon: "🍎" }, play: { label: "क्रियाएं", icon: "🏃" }, feelings: { label: "भावनाएं", icon: "😄" } };
 
-    // PERFECTLY CLEANED MATRIX VOID OF GUESSWORK DUPLICATES
-    const defaultMasterCorpus = [
+    // --- MANUALLY BALANCED EXPLICIT MATRIX REGISTRY (NO DYNAMIC GUESSING) ---
+    const masterCorpus = [
+        // Category 1: Urgent / ज़रुरी दर्द
         { file: "Emergency_6338", hindi: "आपातकाल", cat_adult: "urgent", cat_child: "toys", type: "social" },
         { file: "I am in pain_6353", hindi: "मुझे दर्द है", cat_adult: "urgent", cat_child: "feelings", type: "descriptor" },
         { file: "I am hurt_6340", hindi: "मुझे चोट लगी है", cat_adult: "urgent", cat_child: "feelings", type: "descriptor" },
@@ -128,6 +112,7 @@
         { file: "I need a break_6397", hindi: "मुझे आराम चाहिए", cat_adult: "urgent", cat_child: "feelings", type: "social" },
         { file: "Hazards_6351", hindi: "खतरा", cat_adult: "urgent", cat_child: "toys", type: "descriptor" },
         
+        // Category 2: Dining / भोजन समय
         { file: "Water_6707", hindi: "पानी", cat_adult: "dining", cat_child: "food", type: "noun" },
         { file: "Tea_6728", hindi: "चाय", cat_adult: "dining", cat_child: "food", type: "noun" },
         { file: "Milk_6708", hindi: "दूध", cat_adult: "dining", cat_child: "food", type: "noun" },
@@ -136,37 +121,47 @@
         { file: "Dal_6568", hindi: "दाल", cat_adult: "dining", cat_child: "food", type: "noun" },
         { file: "Sabzi_6566", hindi: "सब्ज़ी", cat_adult: "dining", cat_child: "food", type: "noun" },
         { file: "Chicken_6921", hindi: "चिकन", cat_adult: "dining", cat_child: "food", type: "noun" },
+        { file: "Mutton_6525", hindi: "मटन", cat_adult: "dining", cat_child: "food", type: "noun" },
+        { file: "Apple_6683", hindi: "सेब", cat_adult: "dining", cat_child: "food", type: "noun" },
+        { file: "Biscuits_6653", hindi: "बिस्कुट", cat_adult: "dining", cat_child: "food", type: "noun" },
+        { file: "Juice_6709", hindi: "जूस", cat_adult: "dining", cat_child: "food", type: "noun" },
         
+        // Category 3: Personal Care / दिनचर्या
         { file: "Toilet_6247", hindi: "शौचालय जाना है", cat_adult: "care", cat_child: "play", type: "verb" },
         { file: "Bathing_6248", hindi: "नहाना है", cat_adult: "care", cat_child: "play", type: "verb" },
         { file: "Sleep_6251", hindi: "सोना है", cat_adult: "care", cat_child: "play", type: "verb" },
         { file: "Change footwear_6462", hindi: "जूते बदलना", cat_adult: "care", cat_child: "play", type: "verb" },
+        { file: "Wash hands_6249", hindi: "हाथ धोना", cat_adult: "care", cat_child: "play", type: "verb" },
+        { file: "Comb hair_6461", hindi: "कंघी करना", cat_adult: "care", cat_child: "play", type: "verb" },
         
+        // Category 4: Social / बातचीत
         { file: "Hello_6361", hindi: "नमस्ते", cat_adult: "social", cat_child: "toys", type: "social" },
         { file: "Thank you_6392", hindi: "धन्यवाद", cat_adult: "social", cat_child: "toys", type: "social" },
         { file: "Please_6391", hindi: "कृपया", cat_adult: "social", cat_child: "toys", type: "social" },
         { file: "Bye_6362", hindi: "अलविदा", cat_adult: "social", cat_child: "toys", type: "social" },
         { file: "About Me_6313", hindi: "मेरे बारे में", cat_adult: "social", cat_child: "toys", type: "social" },
-        { file: "Add-ons_6264", hindi: "अतिरिक्त शब्द", cat_adult: "social", cat_child: "toys", type: "social" },
         { file: "Group_6320", hindi: "समूह", cat_adult: "social", cat_child: "toys", type: "noun" },
         { file: "Aunt's birthday_7257", hindi: "जन्मदिन", cat_adult: "social", cat_child: "toys", type: "social" },
+        { file: "Sorry_6363", hindi: "क्षमा करें", cat_adult: "social", cat_child: "toys", type: "social" },
         
+        // Category 5: Therapy / चिकित्सा
         { file: "Doctor_6307", hindi: "डॉक्टर", cat_adult: "therapy", cat_child: "toys", type: "noun" },
         { file: "Nurse_6308", hindi: "नर्स", cat_adult: "therapy", cat_child: "toys", type: "noun" },
         { file: "Medicine_6343", hindi: "दवा लेनी है", cat_adult: "therapy", cat_child: "food", type: "noun" },
         { file: "Exercises_6479", hindi: "कसरत", cat_adult: "therapy", cat_child: "play", type: "verb" },
+        { file: "Speech therapy_6488", hindi: "स्पीच थेरेपी", cat_adult: "therapy", cat_child: "play", type: "verb" },
         
+        // Category 6: Home & Activities / घर पर गतिविधियां
         { file: "Air conditioner_6477", hindi: "एसी चलाएं", cat_adult: "home", cat_child: "toys", type: "noun" },
         { file: "Fan_7025", hindi: "पंखा चलाएं", cat_adult: "home", cat_child: "toys", type: "noun" },
         { file: "Light_6470", hindi: "लाइट", cat_adult: "home", cat_child: "toys", type: "noun" },
         { file: "Television_7040", hindi: "टी वी देखना है", cat_adult: "home", cat_child: "play", type: "noun" },
         { file: "Activities_6270", hindi: "गतिविधियां", cat_adult: "home", cat_child: "play", type: "noun" },
-        { file: "Arts and crafts_6850", hindi: "आर्ट और क्राफ्ट", cat_adult: "home", cat_child: "play", type: "noun" }
+        { file: "Arts and crafts_6850", hindi: "आर्ट और क्राफ्ट", cat_adult: "home", cat_child: "play", type: "noun" },
+        { file: "Doll_6778", hindi: "गुड़िया", cat_adult: "home", cat_child: "toys", type: "noun" },
+        { file: "Car_7053", hindi: "गाड़ी", cat_adult: "home", cat_child: "toys", type: "noun" }
     ];
 
-    let masterCorpus = JSON.parse(localStorage.getItem('hearlink_master_corpus')) || defaultMasterCorpus;
-
-    function saveCorpusToDisk() { localStorage.setItem('hearlink_master_corpus', JSON.stringify(masterCorpus)); }
     function initSystem() { renderSidebar(); filterDataCorpus(); }
 
     function renderSidebar() {
@@ -186,14 +181,14 @@
         if (activePopulation === 'adult') {
             let base = masterCorpus.filter(item => item.cat_adult);
             if (searchText) {
-                activeItemsList = base.filter(item => item.hindi.toLowerCase().includes(searchText) || item.file.toLowerCase().includes(searchText));
+                activeItemsList = base.filter(item => item.hindi.includes(searchText) || item.file.toLowerCase().includes(searchText));
             } else {
                 activeItemsList = base.filter(item => item.cat_adult === currentCategory);
             }
         } else {
             let base = masterCorpus.filter(item => item.cat_child);
             if (searchText) {
-                activeItemsList = base.filter(item => item.hindi.toLowerCase().includes(searchText) || item.file.toLowerCase().includes(searchText));
+                activeItemsList = base.filter(item => item.hindi.includes(searchText) || item.file.toLowerCase().includes(searchText));
             } else {
                 activeItemsList = base.filter(item => item.cat_child === currentCategory);
             }
@@ -227,11 +222,6 @@
                 if (item.type === 'descriptor') card.style.backgroundColor = 'var(--fitz-descriptor)';
                 if (item.type === 'noun') card.style.backgroundColor = 'var(--fitz-noun)';
             }
-            if (isEditorModeActive && !item.core) {
-                const delBadge = document.createElement('div'); delBadge.className = 'del-badge'; delBadge.textContent = '×';
-                delBadge.onclick = (e) => { e.stopPropagation(); deleteItemFromCorpus(item.file); };
-                card.appendChild(delBadge);
-            }
             const folderPrefix = "idc_symbols"; const imageSrc = `./${folderPrefix}/${encodeURIComponent(item.file.trim())}.svg`;
             card.onclick = () => handleCardClick(item.hindi);
             card.innerHTML += `<img class="aac-image" src="${imageSrc}" onerror="handleImgError(this)" alt="${item.hindi}"><div class="aac-label">${item.hindi}</div>`;
@@ -240,19 +230,8 @@
     }
 
     function handleImgError(imgElement) { imgElement.style.display = 'none'; const fallback = document.createElement('div'); fallback.style.fontSize = '2.3rem'; fallback.style.color = '#cbd5e1'; fallback.style.height = '70%'; fallback.style.display = 'flex'; fallback.style.alignItems = 'center'; fallback.style.justifyContent = 'center'; fallback.textContent = (activePopulation === 'adult') ? '🖼️' : '🎨'; imgElement.parentNode.insertBefore(fallback, imgElement); }
-    function toggleEditorMode() { isEditorModeActive = !isEditorModeActive; document.getElementById('btnEditorToggle').classList.toggle('active', isEditorModeActive); document.getElementById('adminPanel').style.display = isEditorModeActive ? 'flex' : 'none'; renderGridDisplay(); }
     
-    function addNewItem() {
-        const fileId = document.getElementById('addFileName').value.trim(); const hindiLabel = document.getElementById('addHindiLabel').value.trim(); const childType = document.getElementById('addChildType').value;
-        if (!fileId || !hindiLabel) { alert("Missing fields"); return; }
-        masterCorpus.push({ file: fileId, hindi: hindiLabel, cat_adult: currentCategory, cat_child: currentCategory, type: childType });
-        saveCorpusToDisk(); document.getElementById('addFileName').value = ''; document.getElementById('addHindiLabel').value = ''; filterDataCorpus();
-    }
-    function deleteItemFromCorpus(fileId) { if (confirm("Delete symbol?")) { masterCorpus = masterCorpus.filter(item => item.file !== fileId); saveCorpusToDisk(); filterDataCorpus(); } }
-    
-    // ANTI-CACHE CRITICAL AGENT INJECTOR
     function resetToFactoryBaseline() { 
-        localStorage.removeItem('hearlink_master_corpus'); 
         localStorage.clear(); 
         location.reload(true); 
     }
@@ -266,8 +245,6 @@
     function executeAcousticFeedback(phrase) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel(); 
-            
-            // Text Pre-Processor Matrix
             let nativeText = phrase.replace(/[A-Za-z]/g, '').replace(/[\\/\\(\\)]/g, ' ').replace(/\\s+/g, ' ').trim();
             if (!nativeText) nativeText = phrase; 
 
@@ -287,7 +264,7 @@
     }
     function changePage(dir) { currentPage += dir; renderGridDisplay(); }
     function handleSearch() { currentPage = 1; filterDataCorpus(); }
-    function setPopulation(pop) { activePopulation = pop; document.getElementById('pop-adult').classList.toggle('active', pop === 'adult'); document.getElementById('pop-child').classList.toggle('active', pop === 'child'); document.getElementById('addChildType').style.display = (pop === 'child') ? 'inline-block' : 'none'; document.getElementById('brandSub').textContent = (pop === 'adult') ? "Context AAC" : "Child Development"; currentCategory = (pop === 'adult') ? 'urgent' : 'toys'; currentPage = 1; document.getElementById('searchInput').value = ''; initSystem(); }
+    function setPopulation(pop) { activePopulation = pop; document.getElementById('pop-adult').classList.toggle('active', pop === 'adult'); document.getElementById('pop-child').classList.toggle('active', pop === 'child'); document.getElementById('brandSub').textContent = (pop === 'adult') ? "Context AAC" : "Child Development"; currentCategory = (pop === 'adult') ? 'urgent' : 'toys'; currentPage = 1; document.getElementById('searchInput').value = ''; initSystem(); }
     function setCommunicationTier(t) { activeCommunicationTier = t; document.getElementById('tier-basic').classList.toggle('active', t === 'basic'); document.getElementById('tier-advanced').classList.toggle('active', t === 'advanced'); document.getElementById('sentenceBar').style.display = (t === 'advanced') ? 'flex' : 'none'; clearSentence(); }
 
     if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
