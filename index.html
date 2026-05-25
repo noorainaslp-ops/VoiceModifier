@@ -2,12 +2,11 @@ import os
 import re
 import json
 
-# Target file paths located side-by-side in your project directory
 source_corpus = "generated_corpus.txt"
 output_html = "index.html"
 
 if not os.path.exists(source_corpus):
-    print(f"Error: '{source_corpus}' not found in this folder.")
+    print(f"Error: '{source_corpus}' not found.")
     exit()
 
 with open(source_corpus, 'r', encoding='utf-8') as f:
@@ -16,209 +15,127 @@ with open(source_corpus, 'r', encoding='utf-8') as f:
 matches = re.findall(r'\{\s*file:\s*"([^"]+)",\s*hindi:\s*"([^"]+)"\s*\}', text)
 
 if not matches:
-    print("Error: Could not parse any valid asset matrices.")
+    print("Error: Could not parse corpus mapping arrays.")
     exit()
 
-print(f"Processing {len(matches)} items using clinical AAC mapping parameters...")
+print("Compiling under a strict clinical classification matrix...")
 
-# --- HIGH-FIDELITY DEVANAGARI TRANSLATION MATRIX ---
-# Systematic reviews show pure Devanagari prevents TTS accent pack drop-out
-hindi_lexicon = {
-    # Functional Pragmatic Controls & Core Locks
-    "about me": "मेरे बारे में", 
-    "add-ons": "अतिरिक्त शब्द", 
-    "add ons": "अतिरिक्त शब्द",
-    "help": "मदद", 
-    "please give me": "चाहिए", 
-    "i am all done": "खत्म",
+# --- FIXED PEDIATRIC FIXED MEMORY CAPTURE SLOTS ---
+# Locates a true operational image file from your corpus to power the 'aur' button safely
+more_asset_file = "Help_6241"
+for file_id, _ in matches:
+    if "more" in file_id.lower() and "time" in file_id.lower():
+        more_asset_file = file_id
+        break
 
-    # Urgent Distress and Pain Indicators
-    "emergency": "आपातकाल", "pain": "दर्द हो रहा है", "hurt": "चोट", "sick": "बीमार", "danger": "खतरा", 
-    "break": "आराम चाहिए", "alone": "अकेला रहना है", "accident": "दुर्घटना", "bleed": "खून बह रहा है", 
-    "choking": "दम घुटना", "fall": "गिर जाना", "hit": "चोट लगी", "scolded": "डांट पड़ी",
-    "i am hurt": "मुझे चोट लगी है", "i feel sick": "मैं बीमार हूँ", "i am in pain": "मुझे दर्द है", 
-    "i need a break": "मुझे आराम चाहिए", "i want to be alone": "मुझे अकेला छोड़ दें", "i need help": "मुझे मदद चाहिए", 
-    "i need more time": "और", # Hard target lookup mapping for the core pediatric symbol trigger
-
-    # Localized Dietetics & Dining Table Elements
-    "aaloo poori": "आलू पूरी", "roti": "रोटी", "rice": "चावल", "dal": "दाल", "sabzi": "सब्ज़ी", 
-    "plate": "थाली", "spoon": "चम्मच", "fork": "कांटा चम्मच", "knife": "चाकू", "cup": "कप", "glass": "ग्लास", 
-    "bowl": "कटोरा", "water": "पानी", "tea": "चाय", "milk": "दूध", "coffee": "कॉफी", "curd": "दही", 
-    "dosa": "डोसा", "idli": "इडली", "sambhar": "सांभर", "khichdi": "खिचड़ी", "poha": "पोहा", "upma": "उपमा",
-    "bhakri": "भाकरी", "paratha": "पराठा", "naan": "नान", "chutney": "चटनी", "papad": "पापड़", "raita": "रायता",
-    "juice": "जूस", "apple": "सेब", "banana": "केला", "mango": "आम", "orange": "संतरा", "grapes": "अंगूर", 
-    "pineapple": "अनानास", "strawberry": "स्ट्रॉबेरी", "watermelon": "तरबूज", "papaya": "पपीता", "guava": "अमरूद",
-    "chikoo": "चीकू", "cake": "केक", "ice cream": "आइसक्रीम", "icecream": "आइसक्रीम", "biscuits": "बिस्कुट", 
-    "biscuit": "बिस्कुट", "sweets": "मिठाई", "laddoo": "लड्डू", "barfi": "बर्फी", "jalebi": "जलेबी", 
-    "gulab jamun": "गुलाब जामुन", "gajar halwa": "गाजर हलवा", "sheera": "शीरा", "rosogulla": "रसगुल्ला",
-    "chaat": "चाट", "samosa": "समोसा", "pakoda": "पकोड़ा", "soda": "सोडा", "popcorn": "पॉपकॉर्न", "wafers": "वेफर्स",
-    "noodles": "नูนल्स", "pasta": "पास्ता", "pizza": "पिज्जा", "burger": "बर्गर", "sandwich": "सैंडविच", 
-    "chicken": "चिकन", "mutton": "मटन", "fish": "मछली", "egg": "अंडा", "eggs": "अंडे", "cheese": "चीज़", 
-    "butter": "मक्खन", "bread": "ब्रेड", "honey": "शहद", "sugar": "चीनी", "salt": "नमक", "soup": "सूप",
-    "waffles": "वाफल्स", "tacos": "टैकोस", "pudding": "पुडिंग", "muffin": "मफिन",
-
-    # Daily Routine & Personal Care (Fitzgerald Key Mapped)
-    "toilet": "शौचालय जाना है", "bathing": "नहाना है", "comb hair": "कंघी करना", "blow nose": "नाक साफ करना", 
-    "shampoo": "शैम्पू", "soap": "साबुन", "cut nails": "नाखून काटना", "sleep": "सोना है", "brush teeth": "ब्रश करना", 
-    "wash": "धोना", "clothes": "कपड़े", "shirt": "शर्ट", "pants": "पैंट", "shorts": "हाफ पैंट", "shoes": "जूते", 
-    "socks": "मोज़े", "sweater": "स्वेटर", "jacket": "जैकेट", "cap": "टोपी", "belt": "बेल्ट", "dress": "कपड़े",
-    "frock": "फ्रॉक", "salwar kameez": "सलवार कमीज", "saree": "साड़ी", "bindi": "बिंदी", "chappals": "चप्पल",
-    "towel": "तौलिया", "mirror": "शीशा", "toothbrush": "टूथब्रश", "toothpaste": "टूथपेस्ट", "handwash": "हैंडवॉश",
-
-    # Social Interaction & Pragmatic Framing
-    "hello": "नमस्ते", "thank you": "धन्यवाद", "this": "यह", "that": "वह", "bye": "अलविदा", "sorry": "क्षमा करें", 
-    "welcome": "स्वागत है", "excuse me": "सुनिए", "quiet please!": "शांत रहें", "good morning": "सुप्रभात", 
-    "good night": "शुभ रात्रि", "good afternoon": "शुभ दोपहर", "good evening": "शुभ शाम", "hi": "हाय", 
-    "yes": "हाँ", "no": "नहीं", "ok": "ठीक है", "done": "हो गया",
-
-    # Clinical Medical & Rehabilitation Settings
-    "doctor": "डॉक्टर", "nurse": "नर्स", "medicine": "दवा लेनी है", "bandage": "पट्टी", "hospital": "अस्पताल", 
-    "clinic": "क्लीनिक", "speech therapy": "स्पीच थेरेपी", "occupational therapy": "ऑक्यूपेशनल थेरेपी",
-    "physiotherapy": "फिजियोथेरेपी", "exercises": "कसरत / व्यायाम", "leg exercises": "पैरों की कसरत", 
-    "therapist": "थेरेपिस्ट", "audiologist": "ऑडियोलॉजिस्ट",
-
-    # Environmental Comfort Controls
-    "air conditioner": "एसी चलाएं", "fan": "पंखा चलाएं", "light": "लाइट", "sofa": "सोफा", "bed": "बिस्तर", 
-    "pillows": "तकिया चाहिए", "blanket": "कंबल चाहिए", "window": "खिड़की", "door": "दरवाजा", "television": "टी वी", 
-    "tv": "टी वी", "chair": "कुर्सी", "table": "मेज़", "kitchen": "रसोई", "fridge": "फ्रिज", "computer": "कंप्यूटर", 
-    "clock": "घड़ी", "lamp": "लैंप", "microwave": "माइक्रोवेव", "vacuum cleaner": "वैक्यूम कलीनर", 
-    "washing machine": "वाशिंग मशीन", "water bottle": "पानी की बोतल", "money": "पैसे", "bag": "बस्ता",
-
-    # Childhood Development, Play & Nature Lexicons
-    "play with me": "मेरे साथ खेलो", "walk": "चलना", "run": "दौड़ना", "dance": "नाच", "draw": "चित्र बनाना", 
-    "write": "लिखना", "read": "पढ़ना", "game": "खेल", "toy": "खिलौना", "blocks": "ब्लॉक खिलौने", "puzzle": "पहेली", 
-    "doll": "गुड़िया", "action figure": "खिलौना", "soft toy": "सॉफ्ट टॉय", "videogame": "वीडियो गेम", 
-    "cricket": "क्रिकेट", "football": "फुटबॉल", "badminton": "बैडमिंटन", "tennis": "टेनिस", "chess": "शतरंज", 
-    "ludo": "लूडो", "carrom": "कैरम", "cards": "ताश", "xbox": "एक्सबॉक्स", "book": "किताब", "story book": "कहानी की किताब", 
-    "homework": "होमवर्क", "school": "स्कूल", "classroom": "कक्षा", "library": "पुस्तकालय", "playground": "खेल का मैदान", 
-    "park": "पार्क", "zoo": "चिड़ियाघर", "temple": "मंदिर", "mosque": "मस्जिद", "church": "चर्च", "gurudwara": "गुरुद्वारा",
-    "bus": "बस", "car": "कार", "rickshaw": "रिक्शा", "train": "ट्रेन", "aeroplane": "हवाई जहाज", 
-    "bicycle": "साइकिल", "bike": "मोटरसाइकिल", "taxi": "टैक्सी", "ship": "जहाज",
-    
-    # Emotional Affect & Internal States
-    "happy": "खुश हूँ", "sad": "उदास हूँ", "angry": "नाराज़ हूँ", "worried": "चिंतित हूँ", "tired": "थक गया हूँ", 
-    "afraid": "डरा हुआ हूँ", "amazed": "अचंभित हूँ", "ashamed": "शर्मिंदा हूँ", "bored": "ऊब गया हूँ", 
-    "irritated": "चिढ़चिढ़ा हूँ", "hot": "गर्मी लग रही है", "cold": "ठंड लग रही है", "confused": "उलझन में हूँ", "disappointed": "निराश हूँ"
+# --- STAGE 1: EXPLICIT CLINICAL REGISTRY (MANUAL MATCH OVERRIDE) ---
+# Enforces exact translation bindings and blocks automated fallback guessing leaks
+explicit_registry = {
+    "about me": {"hindi": "मेरे बारे में", "adult": "social", "child": "toys", "type": "social"},
+    "add-ons": {"hindi": "अतिरिक्त शब्द", "adult": "social", "child": "toys", "type": "social"},
+    "add ons": {"hindi": "अतिरिक्त शब्द", "adult": "social", "child": "toys", "type": "social"},
+    "change footwear": {"hindi": "जूते बदलना", "adult": "care", "child": "play", "type": "verb"},
+    "exercises": {"hindi": "कसरत", "adult": "therapy", "child": "play", "type": "verb"},
+    "exercise": {"hindi": "कसरत", "adult": "therapy", "child": "play", "type": "verb"},
+    "group": {"hindi": "समूह", "adult": "social", "child": "toys", "type": "noun"},
+    "activities": {"hindi": "गतिविधियां", "adult": "home", "child": "play", "type": "noun"},
+    "hazards": {"hindi": "खतरा / नुकसान", "adult": "urgent", "child": "feelings", "type": "descriptor"},
+    "hazard": {"hindi": "खतरा", "adult": "urgent", "child": "feelings", "type": "descriptor"},
+    "ok": {"hindi": "ठीक है", "adult": "social", "child": "play", "type": "social"},
+    "chicken": {"hindi": "चिकन खाना", "adult": "dining", "child": "food", "type": "noun"},
+    "mutton": {"hindi": "मटन खाना", "adult": "dining", "child": "food", "type": "noun"},
+    "i need a break": {"hindi": "मुझे आराम चाहिए", "adult": "urgent", "child": "feelings", "type": "social"},
+    "i am in pain": {"hindi": "मुझे दर्द है", "adult": "urgent", "child": "feelings", "type": "descriptor"},
+    "hurt": {"hindi": "चोट लगी है", "adult": "urgent", "child": "feelings", "type": "descriptor"}
 }
 
-fringe_translit = {
-    "about": "अबाउट", "me": "मी", "action": "एक्शन", "figure": "फिगर", "activities": "एक्टिविटीज",
-    "add-ons": "ऐड-ऑन्स", "adventure": "एडवेंचर", "aeroplane": "एरोप्लेन", "afraid": "अफ्रेड",
-    "afternoon": "आफ्टरनून", "air": "एयर", "conditioner": "कंडीशनर", "allergy": "एलर्जी",
-    "amazed": "अमेज्ड", "angry": "एंग्री", "animals": "एनिमल्स", "birds": "बर्ड्स", "ankle": "एंकर",
-    "ant": "एंट", "apple": "एप्पल", "april": "अप्रैल", "art": "आर्ट", "craft": "क्राफ्ट",
-    "museum": "म्यूजियम", "therapy": "थेरेपी", "arts": "आर्ट्स", "crafts": "क्राफ़्ट्स",
-    "ashamed": "अशेम्ड", "august": "अगस्त", "aunt": "आंट", "birthday": "जन्मदिन", "autumn": "ऑटम",
-    "awesome!": "ऑसम!", "baby": "बेबी", "back": "बैक", "badminton": "बैडमिंटन", "bag": "बैग",
-    "balcony": "बालकनी", "ball": "बॉल", "pit": "पिट", "banana": "बनाना", "milkshake": "मिल्कशेक",
-    "bandage": "बैंडेज", "barfi": "बर्फी", "basketball": "बास्केटबॉल", "bat": "बैट", "and": "एंड",
-    "bathing": "बेदिंग", "bathroom": "बाथरूम", "bear": "बियर", "bed": "बेड", "time": "टाइम",
-    "routine": "रूटीन", "story": "स्टोरी", "book": "किताब", "bedroom": "बेडरूम", "bee": "बी",
-    "belt": "बेल्ट", "bhakri": "भाकरी", "bicycle": "बायसिकल", "bike": "बाइक", "bindi": "बिंदी",
-    "birthdays": "बर्थडेज़", "biscuits": "बिस्कुट", "black": "ब्लैक", "paper": "पेपर", "blanket": "ब्लैंकेट",
-    "blocks": "ब्लॉक्स", "blow": "ब्लो", "nose": "नोज़", "blue": "ब्लू", "blueberry": "ब्लूबेरी",
-    "board": "बोर्ड", "game": "गेम", "body": "बॉडी", "vests": "वेस्ट्स", "books": "बुक्स",
-    "bored": "बोर्ड", "bournvita": "बॉर्नविटा", "bowl": "बाउल", "bracelet": "ब्रेसलेट", "bread": "ब्रेड",
-    "breakfast": "ब्रेकफास्ट", "brother": "ब्रदर", "brown": "ब्राउन", "buffalo": "बफेलो", "bus": "बस",
-    "butter": "बटर", "bye": "बाय", "cake": "केक", "calm": "काम", "canteen": "कैंटीन", "cap": "कैप",
-    "car": "कार", "caregiver": "केयरगिवर", "cars": "कार्स", "watch": "वॉच", "out!": "आउट!", "cat": "कैट",
-    "catch-catch": "कैच-कैच", "chaat": "चाट", "chair": "चेयर", "chalk": "चौक", "change": "चेंज",
-    "footwear": "फुटवियर", "frock": "फ्रॉक", "innerwear": "इनरवियर", "jeans": "जींस", "leggings": "लेगिंग्स",
-    "music": "म्यूजिक", "pants": "पैंट्स", "shoes": "शूज़", "shorts": "शॉट्स", "skirt": "स्कर्ट",
-    "slacks": "स्लैक्स", "socks": "सॉक्स", "t-shirt": "टी-शर्ट", "chappals": "चप्पल", "cheese": "चीज़",
-    "cherry": "चेरी", "chess": "शतरंज", "chicken": "चिकन", "chikoo": "चीकू", "chocolate": "चॉकलेट",
-    "chor": "चोर", "police": "पुलिस", "christmas": "क्रिसमस", "church": "चर्च", "chutney": "चटनी",
-    "circle": "सर्किल", "classroom": "क्लासरूम", "clinic": "क्लिनिक", "clock": "क्लॉक", "clothes": "क्लोथ्स",
-    "shop": "शॉप", "cloudy": "क्लाउडी", "coca-cola": "कोका-कोला", "cockroach": "कॉकरोच", "coffee": "कॉफी",
-    "cold": "कोल्ड", "drinks": "ड्रिंक्स", "colors": "कलर्स", "coloured": "कलर्ड", "comb": "कोम्ब",
-    "hair": "हेयर", "comic": "कॉमिक", "compass": "कंपस", "box": "बॉक्स", "computer": "कंप्यूटर",
-    "lab": "लैब", "confused": "कन्फ्यूज्ड", "cornflakes": "कॉर्नफ्लेक्स", "cousin": "कज़िन", "cow": "गाय",
-    "crab": "क्रैब", "meat": "मीट", "crayon": "क्रेयॉन", "cricket": "क्रिकेट", "crocodile": "क्रोकोडाइल",
-    "crow": "क्रो", "cube": "क्यूब", "cup": "कप", "cupboard": "कपबोर्ड", "curd": "कर्ड", "cut": "कट",
-    "nails": "नेल्स", "cutlery": "कटलरी", "cycle": "साइकिल", "daily": "डेली", "dal": "दाल", "khichdi": "खिचड़ी",
-    "dance": "डांस", "danger": "डेंजर", "day": "डे", "december": "दिसंबर", "desk": "डेस्क", "diamond": "डायमंड",
-    "disappointed": "डिसापॉइंटेड", "divider": "डिवाइडर", "diwali": "दीवाली", "doctor": "डॉक्टर", "dodgeball": "डॉजबॉल",
-    "waffles": "वाफल्स", "xbox": "एक्सबॉक्स", "games": "गेम्स", "football": "फुटबॉल"
+# Phonetic script normalization library to clear remaining fringe English layouts
+fringe_translit_clean = {
+    "arts": "आर्ट", "crafts": "क्राफ्ट", "birthday": "जन्मदिन", "birthdays": "जन्मदिन",
+    "pizza": "पिज्जा", "burger": "बर्गर", "waffles": "वाफल्स", "tacos": "टैकोस", "xbox": "एक्सबॉक्स",
+    "doll": "गुड़िया", "blocks": "ब्लॉक्स", "puzzle": "पहेली", "car": "कार", "bus": "बस"
 }
-
-def transliterate_text(word_str):
-    tokens = re.findall(r'[a-zA-Z0-9!]+', word_str)
-    converted = []
-    for tok in tokens:
-        tl = tok.lower()
-        if tl in fringe_translit:
-            converted.append(fringe_translit[tl])
-        else:
-            converted.append(tok.capitalize())
-    return " ".join(converted)
-
-food_alternates = ['bacon', 'burrito', 'brownie', 'buns', 'burger', 'casserole', 'cheese', 'cookies', 'cider', 'cracker', 'crepes', 'croissant', 'crumble', 'custard', 'danish', 'dips', 'donut', 'fajita', 'falafel', 'fried rice', 'fritters', 'frozen yogurt', 'gyro', 'hamburger', 'hashbrowns', 'hotdog', 'hummus', 'ketchup', 'kippers', 'mac and cheese', 'macaroons', 'syrup', 'marmalade', 'muffin', 'nutella', 'oatmeal', 'pancakes', 'pasties', 'pastry', 'pie', 'pudding', 'salsa', 'sandwiches', 'sausage', 'scones', 'scrambled', 'steak', 'veggies', 'stew', 'sauce', 'tacos', 'tart', 'waffles', 'wrap']
 
 html_items = []
-seen_adult_pairs = set()
-seen_child_pairs = set()
+seen_adult_keys = set()
+seen_child_keys = set()
 
-for file_id, original_label in matches:
+for file_id, _ in matches:
     fn_lower = file_id.lower()
-    base_english_name = file_id.split('_')[0].strip()
-    clean_key = base_english_name.lower()
-    
-    # Process string lookup transformations
-    hindi_label = clean_key
-    if clean_key in hindi_lexicon:
-        hindi_label = hindi_lexicon[clean_key]
+    base_english = file_id.split('_')[0].strip()
+    clean_key = base_english.lower()
+
+    # Skip duplicates of complex items right at the entry pipeline stage
+    if "arts and crafts" in fn_lower and ("71" in fn_lower or "62" in fn_lower):
+        continue
+    if "birthday" in fn_lower and ("726" in fn_lower or "727" in fn_lower):
+        continue
+
+    # 1. Process Explicit Mappings
+    if clean_key in explicit_registry:
+        reg = explicit_registry[clean_key]
+        hindi_label = reg["hindi"]
+        adult_cat = reg["adult"]
+        child_cat = reg["child"]
+        grammar_type = reg["type"]
     else:
-        for key, value in hindi_lexicon.items():
-            if key in clean_key:
-                hindi_label = value
-                break
+        # Evaluate normal structural mappings dynamically
+        hindi_label = clean_key
+        if clean_key in fringe_translit_clean:
+            hindi_label = fringe_translit_clean[clean_key]
+        else:
+            # High-accuracy substring search parameters
+            for k, v in fringe_translit_clean.items():
+                if k in clean_key:
+                    hindi_label = v
+                    break
+            if hindi_label == clean_key:
+                hindi_label = base_english
 
-    if hindi_label == clean_key:
-        hindi_label = transliterate_text(base_english_name)
+        # 2. Base Structural Mapping Layers
+        adult_cat = 'home'
+        if any(kw in fn_lower for kw in ['emergency', 'pain', 'hurt', 'sick', 'danger', 'bleed', 'choking', 'fall', 'accident', 'unsafe', 'hazard', 'break']):
+            adult_cat = 'urgent'
+        elif any(kw in fn_lower for kw in ['aaloo', 'poori', 'roti', 'rice', 'dal', 'sabzi', 'plate', 'spoon', 'juice', 'apple', 'banana', 'mango', 'orange', 'food', 'breakfast', 'lunch', 'dinner', 'eat', 'drink', 'sweet', 'biscuit', 'cake', 'soup', 'paratha', 'naan', 'tea', 'milk', 'water', 'chicken', 'mutton', 'fish', 'egg', 'waffles', 'pizza', 'burger', 'tacos', 'pudding']):
+            adult_cat = 'dining'
+        elif any(kw in fn_lower for kw in ['toilet', 'bathing', 'comb', 'nose', 'shampoo', 'soap', 'nail', 'sleep', 'brush', 'wash', 'clothes', 'pant', 'shirt', 'shoes', 'dress', 'bindi', 'chappal', 'towel', 'mirror', 'toothpaste', 'toothbrush', 'wear', 'footwear']):
+            adult_cat = 'care'
+        elif any(kw in fn_lower for kw in ['hello', 'thank', 'please', 'bye', 'sorry', 'welcome', 'excuse', 'quiet', 'morning', 'night', 'hi', 'friend', 'family', 'mother', 'father', 'brother', 'sister', 'uncle', 'aunt', 'grandfather', 'grandmother', 'teacher', 'sir', 'madam', 'birthday', 'about me', 'add ons', 'group']):
+            adult_cat = 'social'
+        elif any(kw in fn_lower for kw in ['doctor', 'nurse', 'medicine', 'bandage', 'speech', 'therapy', 'exercise', 'hospital', 'clinic', 'pill', 'painkiller', 'therapist', 'audiologist', 'kasesat']):
+            adult_cat = 'therapy'
 
-    # --- ADVANCED STRUCTURAL SEGMENTATION BALANCING ---
-    adult_cat = 'home'
-    if any(kw in fn_lower for kw in ['emergency', 'pain', 'hurt', 'sick', 'danger', 'bleed', 'choking', 'fall', 'accident', 'unsafe', 'hazard']):
-        adult_cat = 'urgent'
-    elif any(kw in fn_lower for kw in list(hindi_lexicon.keys()) + food_alternates) and any(kw in fn_lower for kw in ['aaloo', 'poori', 'roti', 'rice', 'dal', 'sabzi', 'plate', 'spoon', 'juice', 'apple', 'banana', 'mango', 'orange', 'food', 'breakfast', 'lunch', 'dinner', 'eat', 'drink', 'sweet', 'biscuit', 'cake', 'soup', 'paratha', 'naan', 'tea', 'milk', 'water', 'chutney', 'papad', 'raita', 'dosa', 'idli', 'sambhar', 'ice cream', 'laddoo', 'barfi', 'jalebi', 'jam'] + food_alternates):
-        adult_cat = 'dining'
-    elif any(kw in fn_lower for kw in ['toilet', 'bathing', 'comb', 'nose', 'shampoo', 'soap', 'nail', 'sleep', 'brush', 'wash', 'clothes', 'pant', 'shirt', 'shoes', 'dress', 'bindi', 'chappal', 'towel', 'mirror', 'toothpaste', 'toothbrush', 'wear', 'frock', 'jacket', 'socks', 'sweater', 'muffler', 'gloves', 'uniform', 'top', 'vests', 'cardigan', 'coat', 'earmuffs', 'belt', 'cap']):
-        adult_cat = 'care'
-    elif any(kw in fn_lower for kw in ['hello', 'thank', 'please', 'bye', 'sorry', 'welcome', 'excuse', 'quiet', 'morning', 'night', 'hi', 'friend', 'family', 'mother', 'father', 'brother', 'sister', 'uncle', 'aunt', 'grandfather', 'grandmother', 'cousin', 'teacher', 'sir', 'madam', 'greet', 'birthday', 'about me', 'add ons']):
-        adult_cat = 'social'
-    elif any(kw in fn_lower for kw in ['doctor', 'nurse', 'medicine', 'bandage', 'speech', 'therapy', 'exercise', 'hospital', 'clinic', 'pill', 'painkiller', 'remedial', 'occupational', 'physiotherapy']):
-        adult_cat = 'therapy'
+        child_cat = 'toys'
+        if adult_cat == 'dining':
+            child_cat = 'food'
+        elif any(kw in fn_lower for kw in ['play', 'walk', 'run', 'dance', 'draw', 'write', 'game', 'toy', 'blocks', 'puzzle', 'doll', 'cricket', 'football', 'badminton', 'tennis', 'chess', 'book', 'story', 'tv', 'television', 'music', 'song', 'video', 'paint', 'craft', 'park', 'zoo', 'playground', 'skipping', 'cycle', 'bicycle', 'swim', 'carrom', 'ludo', 'cards', 'xbox', 'activities', 'ok']):
+            child_cat = 'play'
+        elif any(kw in fn_lower for kw in ['happy', 'sad', 'angry', 'worried', 'tired', 'sick', 'afraid', 'amazed', 'ashamed', 'bored', 'irritated', 'cold', 'hot', 'crying', 'scared', 'calm']):
+            child_cat = 'feelings'
 
-    child_cat = 'toys'
-    if adult_cat == 'dining':
-        child_cat = 'food'
-    elif any(kw in fn_lower for kw in ['play', 'walk', 'run', 'dance', 'draw', 'write', 'game', 'toy', 'blocks', 'puzzle', 'doll', 'cricket', 'football', 'badminton', 'tennis', 'chess', 'book', 'story', 'tv', 'television', 'music', 'song', 'video', 'paint', 'craft', 'park', 'zoo', 'playground', 'skipping', 'cycle', 'bicycle', 'swim', 'carrom', 'ludo', 'cards', 'xbox', 'barbie', 'bowling', 'foosball', 'ipad', 'hockey', 'skating', 'rugby', 'soccer', 'softball', 'watersports', 'hide', 'catch', 'police', 'kite', 'swing', 'trampoline', 'i need more time']):
-        child_cat = 'play'
-    elif any(kw in fn_lower for kw in ['happy', 'sad', 'angry', 'worried', 'tired', 'sick', 'afraid', 'amazed', 'ashamed', 'bored', 'irritated', 'cold', 'hot', 'crying', 'laughing', 'scared', 'stressed', 'calm']):
-        child_cat = 'feelings'
+        grammar_type = 'noun'
+        if any(kw in fn_lower for kw in ['eat', 'drink', 'walk', 'sleep', 'run', 'dance', 'draw', 'write', 'play', 'go', 'want', 'give', 'come', 'stop', 'look', 'open', 'close', 'comb', 'wash', 'cut', 'blow', 'brush', 'wear', 'speak', 'change']):
+            grammar_type = 'verb'
+        elif any(kw in fn_lower for kw in ['happy', 'sad', 'angry', 'worried', 'tired', 'sick', 'afraid', 'amazed', 'ashamed', 'bored', 'irritated', 'more', 'big', 'small', 'hot', 'cold', 'good', 'bad', 'sweet', 'sour', 'spicy', 'heavy', 'light', 'unsafe', 'stressed']):
+            grammar_type = 'descriptor'
+        elif any(kw in fn_lower for kw in ['hello', 'thank', 'please', 'bye', 'sorry', 'welcome', 'excuse', 'quiet', 'hi', 'yes', 'no', 'help', 'done', 'ok']):
+            grammar_type = 'social'
 
-    grammar_type = 'noun'
-    if any(kw in fn_lower for kw in ['eat', 'drink', 'walk', 'sleep', 'run', 'dance', 'draw', 'write', 'play', 'go', 'want', 'give', 'come', 'stop', 'look', 'open', 'close', 'comb', 'wash', 'cut', 'blow', 'brush', 'wear', 'speak', 'switch', 'greet', 'catch', 'hide', 'cross', 'pinch', 'hit', 'push', 'scold', 'touch', 'bite', 'kick', 'spit', 'talking', 'share', 'tell', 'show', 'slow', 'take', 'read', 'swim', 'clasp']):
-        grammar_type = 'verb'
-    elif any(kw in fn_lower for kw in ['happy', 'sad', 'angry', 'worried', 'tired', 'sick', 'afraid', 'amazed', 'ashamed', 'bored', 'irritated', 'more', 'big', 'small', 'hot', 'cold', 'good', 'bad', 'red', 'blue', 'green', 'yellow', 'purple', 'white', 'black', 'brown', 'sunny', 'rainy', 'cloudy', 'sweet', 'sour', 'spicy', 'heavy', 'light', 'loose', 'tight', 'warm', 'gray', 'golden', 'silver', 'foggy', 'windy', 'snowy', 'pointed', 'unsafe', 'stressed']):
-        grammar_type = 'descriptor'
-    elif any(kw in fn_lower for kw in ['hello', 'thank', 'please', 'bye', 'sorry', 'welcome', 'excuse', 'quiet', 'hi', 'yes', 'no', 'help', 'done', 'awesome', 'great', 'five', 'meet']):
-        grammar_type = 'social'
-
-    adult_pair = (adult_cat, hindi_label)
-    child_pair = (child_cat, hindi_label)
+    # Strict UI deduplication checkpoint logic
+    a_key = (adult_cat, hindi_label)
+    c_key = (child_cat, hindi_label)
     
     final_cat_adult = adult_cat
-    if adult_pair in seen_adult_pairs:
-        final_cat_adult = None 
+    if a_key in seen_adult_keys:
+        final_cat_adult = None
     else:
-        seen_adult_pairs.add(adult_pair)
+        if adult_cat: seen_adult_keys.add(a_key)
         
     final_cat_child = child_cat
-    if child_pair in seen_child_pairs:
-        final_cat_child = None 
+    if c_key in seen_child_keys:
+        final_cat_child = None
     else:
-        seen_child_pairs.add(child_pair)
+        if child_cat: seen_child_keys.add(c_key)
 
     if final_cat_adult is None and final_cat_child is None:
         continue
@@ -238,7 +155,7 @@ html_boilerplate_front = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HearLink AAC - Complete Unified Native Engine</title>
+    <title>HearLink AAC - Native Unified Grid</title>
     <style>
         :root {
             --bg: #f8fafc; --text: #0f172a; --card-bg: #ffffff; --border: #cbd5e1;
@@ -337,12 +254,11 @@ html_boilerplate_front = """<!DOCTYPE html>
     let currentPage = 1; let structuralSentence = []; let isEditorModeActive = false;
     const itemsPerPage = 8; 
 
-    // --- HARD KEY EVIDENCE PLACEMENT ARRAYS ---
-    // Maps 'I need more time' asset path cleanly to populate 'aur' concept slot seamlessly
+    // Anchors pediatric layout targeting parameters safely to prevent layout shifts
     const childCore = [
-        { file: "Help_6241", hindi: "मदद", type: "social", core: true },
+        { file: \"""" + more_asset_file + """\", hindi: "मदद चाहिए", type: "social", core: true },
         { file: "Please give me_6394", hindi: "चाहिए", type: "verb", core: true },
-        { file: "I need more time_6397", hindi: "और", type: "descriptor", core: true },
+        { file: \"""" + more_asset_file + """\", hindi: "और चाहिए", type: "descriptor", core: true },
         { file: "I am all done_6398", hindi: "खत्म", type: "social", core: true }
     ];
 
@@ -437,11 +353,11 @@ html_boilerplate_back = """
     
     function addNewItem() {
         const fileId = document.getElementById('addFileName').value.trim(); const hindiLabel = document.getElementById('addHindiLabel').value.trim(); const childType = document.getElementById('addChildType').value;
-        if (!fileId || !hindiLabel) { alert("Missing fields"); return; }
+        if (!fileId || !hindiLabel) { alert("Fields blank"); return; }
         masterCorpus.push({ file: fileId, hindi: hindiLabel, cat_adult: currentCategory, cat_child: currentCategory, type: childType });
         saveCorpusToDisk(); document.getElementById('addFileName').value = ''; document.getElementById('addHindiLabel').value = ''; filterDataCorpus();
     }
-    function deleteItemFromCorpus(fileId) { if (confirm("Delete symbol?")) { masterCorpus = masterCorpus.filter(item => item.file !== fileId); saveCorpusToDisk(); filterDataCorpus(); } }
+    function deleteItemFromCorpus(fileId) { if (confirm("Delete?")) { masterCorpus = masterCorpus.filter(item => item.file !== fileId); saveCorpusToDisk(); filterDataCorpus(); } }
     function resetToFactoryBaseline() { if (confirm("Reset layout data?")) { localStorage.removeItem('hearlink_master_corpus'); location.reload(); } }
 
     function handleCardClick(word) { if (activeCommunicationTier === 'basic') { executeAcousticFeedback(word); } else { structuralSentence.push(word); renderSentenceDisplay(); } }
@@ -458,23 +374,13 @@ html_boilerplate_back = """
 
             const utterance = new SpeechSynthesisUtterance(nativeText); 
             utterance.volume = 1.0;
-            
-            if (activePopulation === 'adult') { 
-                utterance.rate = 0.70; utterance.pitch = 1.0; 
-            } else { 
-                utterance.rate = 0.72; utterance.pitch = 1.25; 
-            }
+            utterance.rate = (activePopulation === 'adult') ? 0.70 : 0.72; 
+            utterance.pitch = (activePopulation === 'adult') ? 1.0 : 1.25; 
             
             const findTrueHindiVoice = () => {
                 const voices = window.speechSynthesis.getVoices();
-                let voice = voices.find(v => v.lang === 'hi-IN' || v.lang === 'hi_IN');
-                if (!voice) voice = voices.find(v => v.name.includes('Google हिन्दी'));
-                if (!voice) {
-                    voice = voices.find(v => v.name.toLowerCase().includes('hindi') || v.name.toLowerCase().includes('india'));
-                }
-                return voice;
+                return voices.find(v => v.lang === 'hi-IN' || v.lang === 'hi_IN') || voices.find(v => v.name.includes('Google हिन्दी'));
             };
-
             const targetVoice = findTrueHindiVoice();
             if (targetVoice) utterance.voice = targetVoice; 
             window.speechSynthesis.speak(utterance);
@@ -494,13 +400,8 @@ html_boilerplate_back = """
 </html>
 """
 
-print("Compiling clinical evidence mappings...")
+print("Writing clean operational script file changes...")
 final_output = html_boilerplate_front + json_corpus_string + html_boilerplate_back
-
 with open(output_html, "w", encoding="utf-8") as out:
     out.write(final_output)
-
-print("=" * 60)
-print(" SUCCESS! 'About Me', 'Add-ons', and 'More' asset links resolved.")
-print(" Push index.html to GitHub via GitHub Desktop now!")
-print("=" * 60)
+print("SUCCESS! Settings saved.")
