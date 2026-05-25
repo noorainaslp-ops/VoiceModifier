@@ -1,156 +1,4 @@
-import os
-import re
-import json
-
-source_corpus = "generated_corpus.txt"
-output_html = "index.html"
-
-if not os.path.exists(source_corpus):
-    print(f"Error: '{source_corpus}' not found.")
-    exit()
-
-with open(source_corpus, 'r', encoding='utf-8') as f:
-    text = f.read()
-
-matches = re.findall(r'\{\s*file:\s*"([^"]+)",\s*hindi:\s*"([^"]+)"\s*\}', text)
-
-if not matches:
-    print("Error: Could not parse corpus mapping arrays.")
-    exit()
-
-print("Compiling under a strict clinical classification matrix...")
-
-# --- FIXED PEDIATRIC FIXED MEMORY CAPTURE SLOTS ---
-# Locates a true operational image file from your corpus to power the 'aur' button safely
-more_asset_file = "Help_6241"
-for file_id, _ in matches:
-    if "more" in file_id.lower() and "time" in file_id.lower():
-        more_asset_file = file_id
-        break
-
-# --- STAGE 1: EXPLICIT CLINICAL REGISTRY (MANUAL MATCH OVERRIDE) ---
-# Enforces exact translation bindings and blocks automated fallback guessing leaks
-explicit_registry = {
-    "about me": {"hindi": "मेरे बारे में", "adult": "social", "child": "toys", "type": "social"},
-    "add-ons": {"hindi": "अतिरिक्त शब्द", "adult": "social", "child": "toys", "type": "social"},
-    "add ons": {"hindi": "अतिरिक्त शब्द", "adult": "social", "child": "toys", "type": "social"},
-    "change footwear": {"hindi": "जूते बदलना", "adult": "care", "child": "play", "type": "verb"},
-    "exercises": {"hindi": "कसरत", "adult": "therapy", "child": "play", "type": "verb"},
-    "exercise": {"hindi": "कसरत", "adult": "therapy", "child": "play", "type": "verb"},
-    "group": {"hindi": "समूह", "adult": "social", "child": "toys", "type": "noun"},
-    "activities": {"hindi": "गतिविधियां", "adult": "home", "child": "play", "type": "noun"},
-    "hazards": {"hindi": "खतरा / नुकसान", "adult": "urgent", "child": "feelings", "type": "descriptor"},
-    "hazard": {"hindi": "खतरा", "adult": "urgent", "child": "feelings", "type": "descriptor"},
-    "ok": {"hindi": "ठीक है", "adult": "social", "child": "play", "type": "social"},
-    "chicken": {"hindi": "चिकन खाना", "adult": "dining", "child": "food", "type": "noun"},
-    "mutton": {"hindi": "मटन खाना", "adult": "dining", "child": "food", "type": "noun"},
-    "i need a break": {"hindi": "मुझे आराम चाहिए", "adult": "urgent", "child": "feelings", "type": "social"},
-    "i am in pain": {"hindi": "मुझे दर्द है", "adult": "urgent", "child": "feelings", "type": "descriptor"},
-    "hurt": {"hindi": "चोट लगी है", "adult": "urgent", "child": "feelings", "type": "descriptor"}
-}
-
-# Phonetic script normalization library to clear remaining fringe English layouts
-fringe_translit_clean = {
-    "arts": "आर्ट", "crafts": "क्राफ्ट", "birthday": "जन्मदिन", "birthdays": "जन्मदिन",
-    "pizza": "पिज्जा", "burger": "बर्गर", "waffles": "वाफल्स", "tacos": "टैकोस", "xbox": "एक्सबॉक्स",
-    "doll": "गुड़िया", "blocks": "ब्लॉक्स", "puzzle": "पहेली", "car": "कार", "bus": "बस"
-}
-
-html_items = []
-seen_adult_keys = set()
-seen_child_keys = set()
-
-for file_id, _ in matches:
-    fn_lower = file_id.lower()
-    base_english = file_id.split('_')[0].strip()
-    clean_key = base_english.lower()
-
-    # Skip duplicates of complex items right at the entry pipeline stage
-    if "arts and crafts" in fn_lower and ("71" in fn_lower or "62" in fn_lower):
-        continue
-    if "birthday" in fn_lower and ("726" in fn_lower or "727" in fn_lower):
-        continue
-
-    # 1. Process Explicit Mappings
-    if clean_key in explicit_registry:
-        reg = explicit_registry[clean_key]
-        hindi_label = reg["hindi"]
-        adult_cat = reg["adult"]
-        child_cat = reg["child"]
-        grammar_type = reg["type"]
-    else:
-        # Evaluate normal structural mappings dynamically
-        hindi_label = clean_key
-        if clean_key in fringe_translit_clean:
-            hindi_label = fringe_translit_clean[clean_key]
-        else:
-            # High-accuracy substring search parameters
-            for k, v in fringe_translit_clean.items():
-                if k in clean_key:
-                    hindi_label = v
-                    break
-            if hindi_label == clean_key:
-                hindi_label = base_english
-
-        # 2. Base Structural Mapping Layers
-        adult_cat = 'home'
-        if any(kw in fn_lower for kw in ['emergency', 'pain', 'hurt', 'sick', 'danger', 'bleed', 'choking', 'fall', 'accident', 'unsafe', 'hazard', 'break']):
-            adult_cat = 'urgent'
-        elif any(kw in fn_lower for kw in ['aaloo', 'poori', 'roti', 'rice', 'dal', 'sabzi', 'plate', 'spoon', 'juice', 'apple', 'banana', 'mango', 'orange', 'food', 'breakfast', 'lunch', 'dinner', 'eat', 'drink', 'sweet', 'biscuit', 'cake', 'soup', 'paratha', 'naan', 'tea', 'milk', 'water', 'chicken', 'mutton', 'fish', 'egg', 'waffles', 'pizza', 'burger', 'tacos', 'pudding']):
-            adult_cat = 'dining'
-        elif any(kw in fn_lower for kw in ['toilet', 'bathing', 'comb', 'nose', 'shampoo', 'soap', 'nail', 'sleep', 'brush', 'wash', 'clothes', 'pant', 'shirt', 'shoes', 'dress', 'bindi', 'chappal', 'towel', 'mirror', 'toothpaste', 'toothbrush', 'wear', 'footwear']):
-            adult_cat = 'care'
-        elif any(kw in fn_lower for kw in ['hello', 'thank', 'please', 'bye', 'sorry', 'welcome', 'excuse', 'quiet', 'morning', 'night', 'hi', 'friend', 'family', 'mother', 'father', 'brother', 'sister', 'uncle', 'aunt', 'grandfather', 'grandmother', 'teacher', 'sir', 'madam', 'birthday', 'about me', 'add ons', 'group']):
-            adult_cat = 'social'
-        elif any(kw in fn_lower for kw in ['doctor', 'nurse', 'medicine', 'bandage', 'speech', 'therapy', 'exercise', 'hospital', 'clinic', 'pill', 'painkiller', 'therapist', 'audiologist', 'kasesat']):
-            adult_cat = 'therapy'
-
-        child_cat = 'toys'
-        if adult_cat == 'dining':
-            child_cat = 'food'
-        elif any(kw in fn_lower for kw in ['play', 'walk', 'run', 'dance', 'draw', 'write', 'game', 'toy', 'blocks', 'puzzle', 'doll', 'cricket', 'football', 'badminton', 'tennis', 'chess', 'book', 'story', 'tv', 'television', 'music', 'song', 'video', 'paint', 'craft', 'park', 'zoo', 'playground', 'skipping', 'cycle', 'bicycle', 'swim', 'carrom', 'ludo', 'cards', 'xbox', 'activities', 'ok']):
-            child_cat = 'play'
-        elif any(kw in fn_lower for kw in ['happy', 'sad', 'angry', 'worried', 'tired', 'sick', 'afraid', 'amazed', 'ashamed', 'bored', 'irritated', 'cold', 'hot', 'crying', 'scared', 'calm']):
-            child_cat = 'feelings'
-
-        grammar_type = 'noun'
-        if any(kw in fn_lower for kw in ['eat', 'drink', 'walk', 'sleep', 'run', 'dance', 'draw', 'write', 'play', 'go', 'want', 'give', 'come', 'stop', 'look', 'open', 'close', 'comb', 'wash', 'cut', 'blow', 'brush', 'wear', 'speak', 'change']):
-            grammar_type = 'verb'
-        elif any(kw in fn_lower for kw in ['happy', 'sad', 'angry', 'worried', 'tired', 'sick', 'afraid', 'amazed', 'ashamed', 'bored', 'irritated', 'more', 'big', 'small', 'hot', 'cold', 'good', 'bad', 'sweet', 'sour', 'spicy', 'heavy', 'light', 'unsafe', 'stressed']):
-            grammar_type = 'descriptor'
-        elif any(kw in fn_lower for kw in ['hello', 'thank', 'please', 'bye', 'sorry', 'welcome', 'excuse', 'quiet', 'hi', 'yes', 'no', 'help', 'done', 'ok']):
-            grammar_type = 'social'
-
-    # Strict UI deduplication checkpoint logic
-    a_key = (adult_cat, hindi_label)
-    c_key = (child_cat, hindi_label)
-    
-    final_cat_adult = adult_cat
-    if a_key in seen_adult_keys:
-        final_cat_adult = None
-    else:
-        if adult_cat: seen_adult_keys.add(a_key)
-        
-    final_cat_child = child_cat
-    if c_key in seen_child_keys:
-        final_cat_child = None
-    else:
-        if child_cat: seen_child_keys.add(c_key)
-
-    if final_cat_adult is None and final_cat_child is None:
-        continue
-
-    html_items.append({
-        "file": file_id,
-        "hindi": hindi_label,
-        "cat_adult": final_cat_adult,
-        "cat_child": final_cat_child,
-        "type": grammar_type
-    })
-
-json_corpus_string = json.dumps(html_items, indent=4, ensure_ascii=False)
-
-html_boilerplate_front = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
@@ -231,7 +79,7 @@ html_boilerplate_front = """<!DOCTYPE html>
         <button class="admin-btn" onclick="addNewItem()">सुरक्षित करें</button>
         <button class="admin-btn reset-btn" onclick="resetToFactoryBaseline()">Reset Data</button>
     </div>
-    <div class="search-container"><input type="text" id="searchInput" class="search-input" placeholder="पूरे 1000+ सिम्बल्स में खोजें..." oninput="handleSearch()"></div>
+    <div class="search-container"><input type="text" id="searchInput" class="search-input" placeholder="पूरे सिम्बल्स में खोजें..." oninput="handleSearch()"></div>
     <div id="sentenceBar" style="display: none;">
         <button class="action-btn clear-btn" onclick="clearSentence()">हटाएं</button>
         <div id="sentenceDisplay" class="sentence-display"></div>
@@ -256,9 +104,9 @@ html_boilerplate_front = """<!DOCTYPE html>
 
     // Anchors pediatric layout targeting parameters safely to prevent layout shifts
     const childCore = [
-        { file: \"""" + more_asset_file + """\", hindi: "मदद चाहिए", type: "social", core: true },
+        { file: "Help_6241", hindi: "मदद चाहिए", type: "social", core: true },
         { file: "Please give me_6394", hindi: "चाहिए", type: "verb", core: true },
-        { file: \"""" + more_asset_file + """\", hindi: "और चाहिए", type: "descriptor", core: true },
+        { file: "I need more time_6397", hindi: "और चाहिए", type: "descriptor", core: true },
         { file: "I am all done_6398", hindi: "खत्म", type: "social", core: true }
     ];
 
@@ -269,10 +117,54 @@ html_boilerplate_front = """<!DOCTYPE html>
     };
     const childFringeCategories = { toys: { label: "खिलौने", icon: "🧸" }, food: { label: "खाना", icon: "🍎" }, play: { label: "क्रियाएं", icon: "🏃" }, feelings: { label: "भावनाएं", icon: "😄" } };
 
-    const defaultMasterCorpus = """
+    // STRICT RE-CLASSIFIED COMPACT REGISTRY 
+    const defaultMasterCorpus = [
+        { file: "Emergency_6338", hindi: "आपातकाल", cat_adult: "urgent", cat_child: "toys", type: "social" },
+        { file: "I am in pain_6353", hindi: "मुझे दर्द है", cat_adult: "urgent", cat_child: "feelings", type: "descriptor" },
+        { file: "I am hurt_6340", hindi: "मुझे चोट लगी है", cat_adult: "urgent", cat_child: "feelings", type: "descriptor" },
+        { file: "I feel sick_6341", hindi: "मैं बीमार हूँ", cat_adult: "urgent", cat_child: "feelings", type: "descriptor" },
+        { file: "Danger_6350", hindi: "खतरा", cat_adult: "urgent", cat_child: "toys", type: "descriptor" },
+        { file: "Help_6241", hindi: "मदद चाहिए", cat_adult: "urgent", cat_child: "toys", type: "social" },
+        { file: "I need a break_6397", hindi: "मुझे आराम चाहिए", cat_adult: "urgent", cat_child: "feelings", type: "social" },
+        { file: "Hazards_6351", hindi: "खतरा", cat_adult: "urgent", cat_child: "toys", type: "descriptor" },
+        
+        { file: "Water_6707", hindi: "पानी", cat_adult: "dining", cat_child: "food", type: "noun" },
+        { file: "Tea_6728", hindi: "चाय", cat_adult: "dining", cat_child: "food", type: "noun" },
+        { file: "Milk_6708", hindi: "दूध", cat_adult: "dining", cat_child: "food", type: "noun" },
+        { file: "Roti_6565", hindi: "रोटी", cat_adult: "dining", cat_child: "food", type: "noun" },
+        { file: "Rice_6567", hindi: "चावल", cat_adult: "dining", cat_child: "food", type: "noun" },
+        { file: "Dal_6568", hindi: "दाल", cat_adult: "dining", cat_child: "food", type: "noun" },
+        { file: "Sabzi_6566", hindi: "सब्ज़ी", cat_adult: "dining", cat_child: "food", type: "noun" },
+        { file: "Chicken_6921", hindi: "चिकन खाना", cat_adult: "dining", cat_child: "food", type: "noun" },
+        { file: "Mutton_6525", hindi: "मटन खाना", cat_adult: "dining", cat_child: "food", type: "noun" },
+        
+        { file: "Toilet_6247", hindi: "शौचालय जाना है", cat_adult: "care", cat_child: "play", type: "verb" },
+        { file: "Bathing_6248", hindi: "नहाना है", cat_adult: "care", cat_child: "play", type: "verb" },
+        { file: "Sleep_6251", hindi: "सोना है", cat_adult: "care", cat_child: "play", type: "verb" },
+        { file: "Change footwear_6462", hindi: "जूते बदलना", cat_adult: "care", cat_child: "play", type: "verb" },
+        
+        { file: "Hello_6361", hindi: "नमस्ते", cat_adult: "social", cat_child: "toys", type: "social" },
+        { file: "Thank you_6392", hindi: "धन्यवाद", cat_adult: "social", cat_child: "toys", type: "social" },
+        { file: "Please_6391", hindi: "कृपया", cat_adult: "social", cat_child: "toys", type: "social" },
+        { file: "Bye_6362", hindi: "अलविदा", cat_adult: "social", cat_child: "toys", type: "social" },
+        { file: "About Me_6313", hindi: "मेरे बारे में", cat_adult: "social", cat_child: "toys", type: "social" },
+        { file: "Add-ons_6264", hindi: "अतिरिक्त शब्द", cat_adult: "social", cat_child: "toys", type: "social" },
+        { file: "Group_6320", hindi: "समूह", cat_adult: "social", cat_child: "toys", type: "noun" },
+        { file: "Aunt's birthday_7257", hindi: "जन्मदिन", cat_adult: "social", cat_child: "toys", type: "social" },
+        
+        { file: "Doctor_6307", hindi: "डॉक्टर", cat_adult: "therapy", cat_child: "toys", type: "noun" },
+        { file: "Nurse_6308", hindi: "नर्स", cat_adult: "therapy", cat_child: "toys", type: "noun" },
+        { file: "Medicine_6343", hindi: "दवा लेनी है", cat_adult: "therapy", cat_child: "food", type: "noun" },
+        { file: "Exercises_6479", hindi: "कसरत", cat_adult: "therapy", cat_child: "play", type: "verb" },
+        
+        { file: "Air conditioner_6477", hindi: "एसी चलाएं", cat_adult: "home", cat_child: "toys", type: "noun" },
+        { file: "Fan_7025", hindi: "पंखा चलाएं", cat_adult: "home", cat_child: "toys", type: "noun" },
+        { file: "Light_6470", hindi: "लाइट", cat_adult: "home", cat_child: "toys", type: "noun" },
+        { file: "Television_7040", hindi: "टी वी देखना है", cat_adult: "home", cat_child: "play", type: "noun" },
+        { file: "Activities_6270", hindi: "गतिविधियां", cat_adult: "home", cat_child: "play", type: "noun" },
+        { file: "Arts and crafts_6850", hindi: "आर्ट और क्राफ्ट", cat_adult: "home", cat_child: "play", type: "noun" }
+    ];
 
-html_boilerplate_back = """
-    
     let masterCorpus = JSON.parse(localStorage.getItem('hearlink_master_corpus')) || defaultMasterCorpus;
 
     function saveCorpusToDisk() { localStorage.setItem('hearlink_master_corpus', JSON.stringify(masterCorpus)); }
@@ -353,11 +245,11 @@ html_boilerplate_back = """
     
     function addNewItem() {
         const fileId = document.getElementById('addFileName').value.trim(); const hindiLabel = document.getElementById('addHindiLabel').value.trim(); const childType = document.getElementById('addChildType').value;
-        if (!fileId || !hindiLabel) { alert("Fields blank"); return; }
+        if (!fileId || !hindiLabel) { alert("Missing fields"); return; }
         masterCorpus.push({ file: fileId, hindi: hindiLabel, cat_adult: currentCategory, cat_child: currentCategory, type: childType });
         saveCorpusToDisk(); document.getElementById('addFileName').value = ''; document.getElementById('addHindiLabel').value = ''; filterDataCorpus();
     }
-    function deleteItemFromCorpus(fileId) { if (confirm("Delete?")) { masterCorpus = masterCorpus.filter(item => item.file !== fileId); saveCorpusToDisk(); filterDataCorpus(); } }
+    function deleteItemFromCorpus(fileId) { if (confirm("Delete symbol?")) { masterCorpus = masterCorpus.filter(item => item.file !== fileId); saveCorpusToDisk(); filterDataCorpus(); } }
     function resetToFactoryBaseline() { if (confirm("Reset layout data?")) { localStorage.removeItem('hearlink_master_corpus'); location.reload(); } }
 
     function handleCardClick(word) { if (activeCommunicationTier === 'basic') { executeAcousticFeedback(word); } else { structuralSentence.push(word); renderSentenceDisplay(); } }
@@ -398,10 +290,3 @@ html_boilerplate_back = """
 </script>
 </body>
 </html>
-"""
-
-print("Writing clean operational script file changes...")
-final_output = html_boilerplate_front + json_corpus_string + html_boilerplate_back
-with open(output_html, "w", encoding="utf-8") as out:
-    out.write(final_output)
-print("SUCCESS! Settings saved.")
