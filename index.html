@@ -1,222 +1,550 @@
-<!DOCTYPE html>
-<html lang="en">
+import os
+import re
+import json
+
+# Target file paths located side-by-side in your repository workspace
+source_corpus = "generated_corpus.txt"
+output_html = "index.html"
+
+if not os.path.exists(source_corpus):
+    print(f"Error: '{source_corpus}' not found in this folder.")
+    exit()
+
+with open(source_corpus, 'r', encoding='utf-8') as f:
+    text = f.read()
+
+matches = re.findall(r'\{\s*file:\s*"([^"]+)",\s*hindi:\s*"([^"]+)"\s*\}', text)
+
+if not matches:
+    print("Error: Could not parse any valid asset matrices.")
+    exit()
+
+# --- HIGH-FIDELITY DEVANAGARI HINDI TRANSLATION DICTIONARY ---
+# Pure Devanagari script stops the operating system from falling back to an English accent pack
+hindi_lexicon = {
+    # Pediatric Target Core Vocabulary Controls (Fixed Position Memory Placements)
+    "help": "मदद", "please give me": "चाहिए", "more": "और", "i am all done": "खत्म",
+
+    # Urgent, Distress & Functional Autonomy Controls
+    "emergency": "आपातकाल", "pain": "दर्द हो रहा है", "hurt": "चोट", "sick": "बीमार", "danger": "खतरा", 
+    "break": "आराम चाहिए", "alone": "अकेला रहना है", "accident": "दुर्घटना", "bleed": "खून बह रहा है", 
+    "choking": "दम घुटना", "fall": "गिर जाना", "hit": "चोट लगी", "scolded": "डांट पड़ी",
+    "i am hurt": "मुझे चोट लगी है", "i feel sick": "मैं बीमार हूँ", "i am in pain": "मुझे दर्द है", 
+    "i need a break": "मुझे आराम चाहिए", "i want to be alone": "मुझे अकेला छोड़ दें", "i need help": "मुझे मदद चाहिए", 
+    "i need more time": "मुझे और समय चाहिए",
+
+    # Localized Dietetics & Dining Table Elements
+    "aaloo poori": "आलू पूरी", "roti": "रोटी", "rice": "चावल", "dal": "दाल", "sabzi": "सब्ज़ी", 
+    "plate": "थाली", "spoon": "चम्मच", "fork": "कांटा चम्मच", "knife": "चाकू", "cup": "कप", "glass": "ग्लास", 
+    "bowl": "कटोरा", "water": "पानी", "tea": "चाय", "milk": "दूध", "coffee": "कॉफी", "curd": "दही", 
+    "dosa": "डोसा", "idli": "इडली", "sambhar": "सांभर", "khichdi": "खिचड़ी", "poha": "पोहा", "upma": "उपमा",
+    "bhakri": "भाकरी", "paratha": "पराठा", "naan": "नान", "chutney": "चटनी", "papad": "पापड़", "raita": "रायता",
+    "juice": "जूस", "apple": "सेब", "banana": "केला", "mango": "आम", "orange": "संतरा", "grapes": "अंगूर", 
+    "pineapple": "अनानास", "strawberry": "स्ट्रॉबेरी", "watermelon": "तरबूज", "papaya": "पपीता", "guava": "अमरूद",
+    "chikoo": "चीकू", "cake": "केक", "ice cream": "आइसक्रीम", "icecream": "आइसक्रीम", "biscuits": "बिस्कुट", 
+    "biscuit": "बिस्कुट", "sweets": "मिठाई", "laddoo": "लड्डू", "barfi": "बर्फी", "jalebi": "जलेबी", 
+    "gulab jamun": "गुलाब जामुन", "gajar halwa": "गाजर हलवा", "sheera": "शीरा", "rosogulla": "रसगुल्ला",
+    "chaat": "चाट", "samosa": "समोसा", "pakoda": "पकोड़ा", "soda": "सोडा", "popcorn": "पॉपकॉर्न", "wafers": "वेफर्स",
+    "noodles": "नूडल्स", "pasta": "पास्ता", "pizza": "पिज्जा", "burger": "बर्गर", "sandwich": "सैंडविच", 
+    "chicken": "चिकन", "mutton": "मटन", "fish": "मछली", "egg": "अंडा", "eggs": "अंडे", "cheese": "चीज़", 
+    "butter": "मक्खन", "bread": "ब्रेड", "honey": "शहद", "sugar": "चीनी", "salt": "नमक", "soup": "सूप",
+    "banana milkshake": "केला शेक", "chocolate milkshake": "चॉकलेट शेक", "mango milkshake": "आम शेक",
+    "strawberry milkshake": "स्ट्रॉबेरी शेक", "apple juice": "सेब का जूस", "orange juice": "संतरे का जूस",
+    "pineapple juice": "अनानास का जूस", "lemon juice": "नींबू पानी", "cold coffee": "कोल्ड कॉफी",
+    "bournvita": "बॉर्नविटा", "waffles": "वाफल्स", "tacos": "टैकोस", "pudding": "पुडिंग", "muffin": "मफिन",
+
+    # Daily Routine & Personal Care (Fitzgerald Key Mapped)
+    "toilet": "शौचालय जाना है", "bathing": "नहाना है", "comb hair": "कंघी करना", "blow nose": "नाक साफ करना", 
+    "shampoo": "शैम्पू", "soap": "साबुन", "cut nails": "नाखून काटना", "sleep": "सोना है", "brush teeth": "ब्रश करना", 
+    "wash": "धोना", "clothes": "कपड़े", "shirt": "शर्ट", "pants": "पैंट", "shorts": "हाफ पैंट", "shoes": "जूते", 
+    "socks": "मोज़े", "sweater": "स्वेटर", "jacket": "जैकेट", "cap": "टोपी", "belt": "बेल्ट", "dress": "कपड़े",
+    "frock": "फ्रॉक", "salwar kameez": "सलवार कमीज", "saree": "साड़ी", "bindi": "बिंदी", "chappals": "चप्पल",
+    "towel": "तौलिया", "mirror": "शीशा", "toothbrush": "टूथब्रश", "toothpaste": "टूथपेस्ट", "handwash": "हैंडवॉश",
+
+    # Social Interaction & Pragmatic Framing
+    "hello": "नमस्ते", "thank you": "धन्यवाद", "please": "कृपया", "bye": "अलविदा", "sorry": "क्षमा करें", 
+    "welcome": "स्वागत है", "excuse me": "सुनिए", "quiet please!": "शांत रहें", "good morning": "सुप्रभात", 
+    "good night": "शुभ रात्रि", "good afternoon": "शुभ दोपहर", "good evening": "शुभ शाम", "hi": "हाय", 
+    "yes": "हाँ", "no": "नहीं", "ok": "ठीक है", "done": "हो गया", "please give me": "कृपया मुझे दें",
+
+    # Clinical Medical & Rehabilitation Settings
+    "doctor": "डॉक्टर", "nurse": "नर्स", "medicine": "दवा लेनी है", "bandage": "पट्टी", "hospital": "अस्पताल", 
+    "clinic": "क्लीनिक", "speech therapy": "स्पीच थेरेपी", "occupational therapy": "ऑक्यूपेशनल थेरेपी",
+    "physiotherapy": "फिजियोथेरेपी", "exercises": "कसरत / व्यायाम", "leg exercises": "पैरों की कसरत", 
+    "therapist": "थेरेपिस्ट", "audiologist": "ऑडियोलॉजिस्ट",
+
+    # Environmental Comfort Controls
+    "air conditioner": "एसी चलाएं", "fan": "पंखा चलाएं", "light": "लाइट", "sofa": "सोफा", "bed": "बिस्तर", 
+    "pillows": "तकिया चाहिए", "blanket": "कंबल चाहिए", "window": "खिड़की", "door": "दरवाजा", "television": "टी वी", 
+    "tv": "टी वी", "chair": "कुर्सी", "table": "मेज़", "kitchen": "रसोई", "fridge": "फ्रिज", "computer": "कंप्यूटर", 
+    "clock": "घड़ी", "lamp": "लैंप", "microwave": "माइक्रोवेव", "vacuum cleaner": "वैक्यूम कलीनर", 
+    "washing machine": "वाशिंग मशीन", "water bottle": "पानी की बोतल", "money": "पैसे", "bag": "बस्ता",
+
+    # Childhood Development, Play & Nature Lexicons
+    "play with me": "मेरे साथ खेलो", "walk": "चलना", "run": "दौड़ना", "dance": "नाच", "draw": "चित्र बनाना", 
+    "write": "लिखना", "read": "पढ़ना", "game": "खेल", "toy": "खिलौना", "blocks": "ब्लॉक खिलौने", "puzzle": "पहेली", 
+    "doll": "गुड़िया", "action figure": "खिलौना", "soft toy": "सॉफ्ट टॉय", "videogame": "वीडियो गेम", 
+    "cricket": "क्रिकेट", "football": "फुटबॉल", "badminton": "बैडमिंटन", "tennis": "टेनिस", "chess": "शतरंज", 
+    "ludo": "लूडो", "carrom": "कैरम", "cards": "ताश", "xbox": "एक्सबॉक्स", "book": "किताब", "story book": "कहानी की किताब", 
+    "homework": "होमवर्क", "school": "स्कूल", "classroom": "कक्षा", "library": "पुस्तकालय", "playground": "खेल का मैदान", 
+    "park": "पार्क", "zoo": "चिड़ियाघर", "temple": "मंदिर", "mosque": "मस्जिद", "church": "चर्च", "gurudwara": "गुरुद्वारा",
+    "bus": "बस", "car": "कार", "rickshaw": "रिक्शा", "train": "ट्रेन", "aeroplane": "हवाई जहाज", 
+    "bicycle": "साइकिल", "bike": "मोटरसाइकिल", "taxi": "टैक्सी", "ship": "जहाज",
+    
+    # Emotional Affect & Internal States
+    "happy": "खुश हूँ", "sad": "उदास हूँ", "angry": "नाराज़ हूँ", "worried": "चिंतित हूँ", "tired": "थक गया हूँ", 
+    "afraid": "डरा हुआ हूँ", "amazed": "अचंभित हूँ", "ashamed": "शर्मिंदा हूँ", "bored": "ऊब गया हूँ", 
+    "irritated": "चिढ़चिढ़ा हूँ", "hot": "गर्मी लग रही है", "cold": "ठंड लग रही है", "confused": "उलझन में हूँ", "disappointed": "निराश हूँ",
+
+    # Family Dyads & Social Circles
+    "mother": "माताजी", "father": "पिताजी", "brother": "भाई", "sister": "बहन", "grandfather": "दादाजी", 
+    "grandmother": "दादीजी", "uncle": "चाचाजी", "aunt": "चाचीजी", "friend": "दोस्त", "friends": "दोस्त", 
+    "caregiver": "देखभाल करने वाला", "baby": "बच्चा",
+
+    # Biological Systems & Anatomical Tokens
+    "head": "सिर", "hair": "बाल", "eyes": "आंखें", "ears": "कान", "nose": "नाक", "mouth": "मुँह", 
+    "tongue": "जीभ", "neck": "गर्दन", "shoulder": "कंधा", "hands": "हाथ", "fingers": "उंगलियां", 
+    "wrist": "कलाई", "stomach": "पेट", "hip": "कूला", "knee": "घुटने", "legs": "पैर", "toes": "पैर की उंगलियां",
+
+    # Zoology Distribution Nodes
+    "dog": "कुत्ता", "cat": "बिल्ली", "cow": "गाय", "buffalo": "भैंस", "goat": "बकरी", "sheep": "भेड़", 
+    "monkey": "बंदर", "horse": "घोड़ा", "lion": "शेर", "tiger": "बाघ", "elephant": "हाथी", "giraffe": "जिराफ़", 
+    "rabbit": "खरगोश", "bear": "भालू", "fox": "लोमड़ी", "wolf": "भेड़िया", "snake": "सांप", "crocodile": "मगरमच्छ", 
+    "tortoise": "कछुआ", "frog": "मेढक", "dolphin": "डॉल्फ़िन", "whale": "व्हेल", 
+    "shark": "शार्क", "duck": "बतख", "parrot": "तोता", "sparrow": "चिड़िया", "crow": "कौआ", "eagle": "चील", 
+    "owl": "उल्लू", "pigeon": "कबूतर", "ant": "चींटी", "bee": "मधुमक्खी", "mosquito": "मच्छर", "cockroach": "कॉकरोच",
+    "zebra": "जेब्रा", "hippopotamus": "दरियाई घोड़ा", "rhinoceros": "गेंडा"
+}
+
+fringe_translit = {
+    "about": "अबाउट", "me": "मी", "action": "एक्शन", "figure": "फिगर", "activities": "एक्टिविटीज",
+    "add-ons": "ऐड-ऑन्स", "adventure": "एडवेंचर", "aeroplane": "एरोप्लेन", "afraid": "अफ्रेड",
+    "afternoon": "आफ्टरनून", "air": "एयर", "conditioner": "कंडीशनर", "allergy": "एलर्जी",
+    "amazed": "अमेज्ड", "angry": "एंग्री", "animals": "एनिमल्स", "birds": "बर्ड्स", "ankle": "एंकर",
+    "ant": "एंट", "apple": "एप्पल", "april": "अप्रैल", "art": "आर्ट", "craft": "क्राफ्ट",
+    "museum": "म्यूजियम", "therapy": "थेरेपी", "arts": "आर्ट्स", "crafts": "क्राफ़्ट्स",
+    "ashamed": "अशेम्ड", "august": "अगस्त", "aunt": "आंट", "birthday": "जन्मदिन", "autumn": "ऑटम",
+    "awesome!": "ऑसम!", "baby": "बेबी", "back": "बैक", "badminton": "बैडमिंटन", "bag": "बैग",
+    "balcony": "बालकनी", "ball": "बॉल", "pit": "पिट", "banana": "बनाना", "milkshake": "मिल्कशेक",
+    "bandage": "बैंडेज", "barfi": "बर्फी", "basketball": "बास्केटबॉल", "bat": "बैट", "and": "एंड",
+    "bathing": "बेदिंग", "bathroom": "बाथरूम", "bear": "बियर", "bed": "बेड", "time": "टाइम",
+    "routine": "रूटीन", "story": "स्टोरी", "book": "किताब", "bedroom": "बेडरूम", "bee": "बी",
+    "belt": "बेल्ट", "bhakri": "भाकरी", "bicycle": "बायसिकल", "bike": "बाइक", "bindi": "बिंदी",
+    "birthdays": "बर्थडेज़", "biscuits": "बिस्कुट", "black": "ब्लैक", "paper": "पेपर", "blanket": "ब्लैंकेट",
+    "blocks": "ब्लॉक्स", "blow": "ब्लो", "nose": "नोज़", "blue": "ब्लू", "blueberry": "ब्लूबेरी",
+    "board": "बोर्ड", "game": "गेम", "body": "बॉडी", "vests": "वेस्ट्स", "books": "बुक्स",
+    "bored": "बोर्ड", "bournvita": "बॉर्नविटा", "bowl": "बाउल", "bracelet": "ब्रेसलेट", "bread": "ब्रेड",
+    "breakfast": "ब्रेकफास्ट", "brother": "ब्रदर", "brown": "ब्राउन", "buffalo": "बफेलो", "bus": "बस",
+    "butter": "बटर", "bye": "बाय", "cake": "केक", "calm": "काम", "canteen": "कैंटीन", "cap": "कैप",
+    "car": "कार", "caregiver": "केयरगिवर", "cars": "कार्स", "watch": "वॉच", "out!": "आउट!", "cat": "कैट",
+    "catch-catch": "कैच-कैच", "chaat": "चाट", "chair": "चेयर", "chalk": "चौक", "change": "चेंज",
+    "footwear": "फुटवियर", "frock": "फ्रॉक", "innerwear": "इनरवियर", "jeans": "जींस", "leggings": "लेगिंग्स",
+    "music": "म्यूजिक", "pants": "पैंट्स", "shoes": "शूज़", "shorts": "शॉट्स", "skirt": "स्कर्ट",
+    "slacks": "स्लैक्स", "socks": "सॉक्स", "t-shirt": "टी-शर्ट", "chappals": "चप्पल", "cheese": "चीज़",
+    "cherry": "चेरी", "chess": "शतरंज", "chicken": "चिकन", "chikoo": "चीकू", "chocolate": "चॉकलेट",
+    "chor": "चोर", "police": "पुलिस", "christmas": "क्रिसमस", "church": "चर्च", "chutney": "चटनी",
+    "circle": "सर्किल", "classroom": "क्लासरूम", "clinic": "क्लिनिक", "clock": "क्लॉक", "clothes": "क्लोथ्स",
+    "shop": "शॉप", "cloudy": "क्लाउडी", "coca-cola": "कोका-कोला", "cockroach": "कॉकरोच", "coffee": "कॉफी",
+    "cold": "कोल्ड", "drinks": "ड्रिंक्स", "colors": "कलर्स", "coloured": "कलर्ड", "comb": "कोम्ब",
+    "hair": "हेयर", "comic": "कॉमिक", "compass": "कंपस", "box": "बॉक्स", "computer": "कंप्यूटर",
+    "lab": "लैब", "confused": "कन्फ्यूज्ड", "cornflakes": "कॉर्नफ्लेक्स", "cousin": "कज़िन", "cow": "गाय",
+    "crab": "क्रैब", "meat": "मीट", "crayon": "क्रेयॉन", "cricket": "क्रिकेट", "crocodile": "क्रोकोडाइल",
+    "crow": "क्रो", "cube": "क्यूब", "cup": "कप", "cupboard": "कपबोर्ड", "curd": "कर्ड", "cut": "कट",
+    "nails": "नेल्स", "cutlery": "कटलरी", "cycle": "साइकिल", "daily": "डेली", "dal": "दाल", "khichdi": "खिचड़ी",
+    "dance": "डांस", "danger": "डेंजर", "day": "डे", "december": "दिसंबर", "desk": "डेस्क", "diamond": "डायमंड",
+    "disappointed": "डिसापॉइंटेड", "divider": "डिवाइडर", "diwali": "दीवाली", "doctor": "डॉक्टर", "dodgeball": "डॉजबॉल",
+    "gull": "गल", "halloween": "हैलोवीन", "hamburger": "हैमबर्गर", "handball": "हैंडबॉल", "hard": "हार्ड",
+    "boiled": "बॉइल्ड", "hashbrowns": "हैशब्राउन्स", "hat": "हैट", "hedgehog": "हैजहॉग", "hiking": "हाइकिंग",
+    "honey": "हनी", "hopscotch": "हॉपस्कॉच", "hot": "हॉट", "hotdog": "हॉटडॉग", "hula-hoop": "हुला-हूप",
+    "hummus": "हम्मस", "ice": "आइस", "hockey": "हॉकी", "iceskating": "आइसस्केटिंग", "ipad": "आईपैड",
+    "kangaroo": "कंगारू", "ketchup": "केचप", "kingfisher": "किंगफिशर", "kippers": "किपर्स", "kiwi": "कीवी",
+    "labour": "लेबर", "lacrosse": "लेक्रॉस", "llama": "लामा", "lychee": "लीची", "mac": "मैक",
+    "macaroons": "मैकरून्स", "maple": "मेपल", "syrup": "सिरप", "marmalade": "मार्शमैलो", "martial": "मार्शल",
+    "arts": "आर्ट्स", "martin": "मार्टिन", "luther": "लूथर", "king": "किंग", "mashed": "मैश्ड",
+    "potatoes": "पोटैटोज़", "memorial": "मेमोरियल", "mozzarella": "मोज़ेरेला", "stick": "स्टिक",
+    "muesli": "म्यूज़ली", "muffin": "मफिन", "muffler": "मफलर", "mustard": "मस्टर्ड", "nachos": "नाचोस",
+    "nutella": "नुटेला", "oatmeal": "ऑटमील", "otter": "ऑटर", "paintball": "पेंटबॉल", "pancakes": "पैनकेक्स",
+    "panda": "पैंडा", "pasties": "पेस्टीज़", "pastry": "पेस्ट्री", "peach": "पीच", "peanut": "पीनट",
+    "butter": "बटर", "pelican": "पेलिकन", "pie": "पाई", "playing": "प्लेइंग", "cards": "कार्ड्स",
+    "plum": "प्लम", "poached": "पोच्ड", "popcorn": "पॉपकॉर्न", "president's": "प्रेसिडेंट्स",
+    "protien": "प्रोटीन", "shake": "शेक", "pudding": "पुडिंग", "racquet": "रैकेट", "roast": "रोस्ट",
+    "beef": "बीफ", "lamb": "लैम", "pork": "पॉर्क", "rodent": "रोडेंट", "rollerskating": "रोलरस्केटिंग",
+    "rugby": "रग्बी", "salad": "सलाद", "dressing": "ड्रेसिंग", "salsa": "साल्सा", "sandwiches": "सैंडविचेस",
+    "sausage": "सॉसेज", "scones": "स्कोन्स", "scrambled": "स्क्रैम्बल्ड", "shepherd's": "शेफर्ड्स",
+    "skiing": "स्कीइंग", "skipping": "स्किपिंग", "rope": "रोप", "skunk": "स्कंक", "smoothie": "स्मूदी",
+    "smores": "स्मॉर्स", "snack": "स्नैक", "snowboarding": "स्नोबोर्डिंग", "soccer": "सॉकर",
+    "soda": "सोडा", "softball": "सॉफ्टबॉल", "st": "सेंट", "patrick's": "पेट्रिक्स", "steak": "स्टेक",
+    "steamed": "स्टीम्ड", "stew": "स्ट्यू", "tabasco": "तंबाकू", "tacos": "टैकोस", "tag": "टैग",
+    "tart": "टार्ट", "tea": "टी", "loaf": "लोफ", "teacake": "टीकेक", "top": "टॉप", "tortilla": "टॉर्टिला",
+    "trail": "ट्रेल", "mix": "मिक्स", "trifle": "ट्राइफल", "turkey": "टर्की", "us": "यूएस",
+    "independence": "इंडिपेंडेंस", "valentines": "वैलेंटाइंस", "vegetable": "वेजिटेबल", "sticks": "स्टिक्स",
+    "veterans": "वेटरन्स", "virtual": "वर्चुअल", "reality": "रिएलिटी", "vollleyball": "वॉलीबॉल",
+    "waffles": "वाफल्स", "watersports": "वॉटरस्पोर्ट्स", "white": "व्हाइट", "wrap": "रैप", "xbox": "एक्सबॉक्स",
+    "games": "गेम्स", "with": "विथ", "us": "अमरीकन", "american": "अमरीकन", "football": "फुटबॉल"
+}
+
+def transliterate_text(word_str):
+    tokens = re.findall(r'[a-zA-Z0-9!]+', word_str)
+    converted = []
+    for tok in tokens:
+        tl = tok.lower()
+        if tl in fringe_translit:
+            converted.append(fringe_translit[tl])
+        else:
+            converted.append(tok.capitalize())
+    return " ".join(converted)
+
+food_alternates = ['bacon', 'burrito', 'brownie', 'buns', 'burger', 'casserole', 'cheese', 'cookies', 'cider', 'cracker', 'crepes', 'croissant', 'crumble', 'custard', 'danish', 'dips', 'donut', 'fajita', 'falafel', 'fried rice', 'fritters', 'frozen yogurt', 'gyro', 'hamburger', 'hashbrowns', 'hotdog', 'hummus', 'ketchup', 'kippers', 'mac and cheese', 'macaroons', 'syrup', 'marmalade', 'muffin', 'nutella', 'oatmeal', 'pancakes', 'pasties', 'pastry', 'pie', 'pudding', 'salsa', 'sandwiches', 'sausage', 'scones', 'scrambled', 'steak', 'veggies', 'stew', 'sauce', 'tacos', 'tart', 'waffles', 'wrap']
+
+html_items = []
+seen_adult_pairs = set()
+seen_child_pairs = set()
+
+for file_id, original_label in matches:
+    fn_lower = file_id.lower()
+    base_english_name = file_id.split('_')[0].strip()
+    clean_key = base_english_name.lower()
+    
+    # Run vocabulary dictionary matching
+    hindi_label = clean_key
+    if clean_key in hindi_lexicon:
+        hindi_label = hindi_lexicon[clean_key]
+    else:
+        for key, value in hindi_lexicon.items():
+            if key in clean_key:
+                hindi_label = value
+                break
+
+    if hindi_label == clean_key:
+        hindi_label = transliterate_text(base_english_name)
+
+    # --- ADVANCED STRUCTURAL SEGMENTATION BALANCING ---
+    adult_cat = 'home'
+    if any(kw in fn_lower for kw in ['emergency', 'pain', 'hurt', 'sick', 'danger', 'bleed', 'choking', 'fall', 'accident', 'unsafe', 'hazard']):
+        adult_cat = 'urgent'
+    elif any(kw in fn_lower for kw in list(hindi_lexicon.keys()) + food_alternates) and any(kw in fn_lower for kw in ['aaloo', 'poori', 'roti', 'rice', 'dal', 'sabzi', 'plate', 'spoon', 'juice', 'apple', 'banana', 'mango', 'orange', 'food', 'breakfast', 'lunch', 'dinner', 'eat', 'drink', 'sweet', 'biscuit', 'cake', 'soup', 'paratha', 'naan', 'tea', 'milk', 'water', 'chutney', 'papad', 'raita', 'dosa', 'idli', 'sambhar', 'ice cream', 'laddoo', 'barfi', 'jalebi', 'jam'] + food_alternates):
+        adult_cat = 'dining'
+    elif any(kw in fn_lower for kw in ['toilet', 'bathing', 'comb', 'nose', 'shampoo', 'soap', 'nail', 'sleep', 'brush', 'wash', 'clothes', 'pant', 'shirt', 'shoes', 'dress', 'bindi', 'chappal', 'towel', 'mirror', 'toothpaste', 'toothbrush', 'wear', 'frock', 'jacket', 'socks', 'sweater', 'muffler', 'gloves', 'uniform', 'top', 'vests', 'cardigan', 'coat', 'earmuffs', 'belt', 'cap']):
+        adult_cat = 'care'
+    elif any(kw in fn_lower for kw in ['hello', 'thank', 'please', 'bye', 'sorry', 'welcome', 'excuse', 'quiet', 'morning', 'night', 'hi', 'friend', 'family', 'mother', 'father', 'brother', 'sister', 'uncle', 'aunt', 'grandfather', 'grandmother', 'cousin', 'teacher', 'sir', 'madam', 'greet', 'birthday']):
+        adult_cat = 'social'
+    elif any(kw in fn_lower for kw in ['doctor', 'nurse', 'medicine', 'bandage', 'speech', 'therapy', 'exercise', 'hospital', 'clinic', 'pill', 'painkiller', 'remedial', 'occupational', 'physiotherapy']):
+        adult_cat = 'therapy'
+
+    child_cat = 'toys'
+    if adult_cat == 'dining':
+        child_cat = 'food'
+    elif any(kw in fn_lower for kw in ['play', 'walk', 'run', 'dance', 'draw', 'write', 'game', 'toy', 'blocks', 'puzzle', 'doll', 'cricket', 'football', 'badminton', 'tennis', 'chess', 'book', 'story', 'tv', 'television', 'music', 'song', 'video', 'paint', 'craft', 'park', 'zoo', 'playground', 'skipping', 'cycle', 'bicycle', 'swim', 'carrom', 'ludo', 'cards', 'xbox', 'barbie', 'bowling', 'foosball', 'ipad', 'hockey', 'skating', 'rugby', 'soccer', 'softball', 'watersports', 'hide', 'catch', 'police', 'kite', 'swing', 'trampoline']):
+        child_cat = 'play'
+    elif any(kw in fn_lower for kw in ['happy', 'sad', 'angry', 'worried', 'tired', 'sick', 'afraid', 'amazed', 'ashamed', 'bored', 'irritated', 'cold', 'hot', 'crying', 'laughing', 'scared', 'stressed', 'calm']):
+        child_cat = 'feelings'
+
+    grammar_type = 'noun'
+    if any(kw in fn_lower for kw in ['eat', 'drink', 'walk', 'sleep', 'run', 'dance', 'draw', 'write', 'play', 'go', 'want', 'give', 'come', 'stop', 'look', 'open', 'close', 'comb', 'wash', 'cut', 'blow', 'brush', 'wear', 'speak', 'switch', 'greet', 'catch', 'hide', 'cross', 'pinch', 'hit', 'push', 'scold', 'touch', 'bite', 'kick', 'spit', 'talking', 'share', 'tell', 'show', 'slow', 'take', 'read', 'swim', 'clasp']):
+        grammar_type = 'verb'
+    elif any(kw in fn_lower for kw in ['happy', 'sad', 'angry', 'worried', 'tired', 'sick', 'afraid', 'amazed', 'ashamed', 'bored', 'irritated', 'more', 'big', 'small', 'hot', 'cold', 'good', 'bad', 'red', 'blue', 'green', 'yellow', 'purple', 'white', 'black', 'brown', 'sunny', 'rainy', 'cloudy', 'sweet', 'sour', 'spicy', 'heavy', 'light', 'loose', 'tight', 'warm', 'gray', 'golden', 'silver', 'foggy', 'windy', 'snowy', 'pointed', 'unsafe', 'stressed']):
+        grammar_type = 'descriptor'
+    elif any(kw in fn_lower for kw in ['hello', 'thank', 'please', 'bye', 'sorry', 'welcome', 'excuse', 'quiet', 'hi', 'yes', 'no', 'help', 'done', 'awesome', 'great', 'five', 'meet']):
+        grammar_type = 'social'
+
+    # STRICT HISTOGRAM DEDUPLICATION GUARD FILTERS
+    adult_pair = (adult_cat, hindi_label)
+    child_pair = (child_cat, hindi_label)
+    
+    final_cat_adult = adult_cat
+    if adult_pair in seen_adult_pairs:
+        final_cat_adult = None 
+    else:
+        seen_adult_pairs.add(adult_pair)
+        
+    final_cat_child = child_cat
+    if child_pair in seen_child_pairs:
+        final_cat_child = None 
+    else:
+        seen_child_pairs.add(child_pair)
+
+    if final_cat_adult is None and final_cat_child is None:
+        continue
+
+    html_items.append({
+        "file": file_id,
+        "hindi": hindi_label,
+        "cat_adult": final_cat_adult,
+        "cat_child": final_cat_child,
+        "type": grammar_type
+    })
+
+json_corpus_string = json.dumps(html_items, indent=4, ensure_ascii=False)
+
+html_boilerplate_front = """<!DOCTYPE html>
+<html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Voice Recorder with Real-Time Effects</title>
-
-  <style>
-    body{
-      font-family: Arial, sans-serif;
-      background:#121212;
-      color:white;
-      text-align:center;
-      padding:30px;
-    }
-
-    .container{
-      max-width:700px;
-      margin:auto;
-      background:#1e1e1e;
-      padding:25px;
-      border-radius:20px;
-      box-shadow:0 0 20px rgba(0,0,0,0.4);
-    }
-
-    button{
-      padding:12px 20px;
-      margin:10px;
-      border:none;
-      border-radius:10px;
-      cursor:pointer;
-      font-size:16px;
-    }
-
-    .start{
-      background:#00c853;
-      color:white;
-    }
-
-    .stop{
-      background:#d50000;
-      color:white;
-    }
-
-    .play{
-      background:#2962ff;
-      color:white;
-    }
-
-    .controls{
-      margin-top:25px;
-      text-align:left;
-    }
-
-    label{
-      display:block;
-      margin-top:15px;
-      font-size:18px;
-    }
-
-    input[type="range"]{
-      width:100%;
-    }
-
-    .value{
-      font-weight:bold;
-      color:#00e5ff;
-    }
-
-    audio{
-      width:100%;
-      margin-top:20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HearLink AAC - Complete Unified Native Engine</title>
+    <style>
+        :root {
+            --bg: #f8fafc; --text: #0f172a; --card-bg: #ffffff; --border: #cbd5e1;
+            --primary: #0284c7; --primary-light: #e0f2fe; --urgent-color: #ef4444;
+            --editor-color: #a855f7; --editor-light: #f3e8ff;
+            --fitz-social: #ffffff; --fitz-verb: #dcfce7; --fitz-descriptor: #e0f2fe; --fitz-noun: #fef9c3;
+        }
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; user-select: none; }
+        header { background: var(--card-bg); border-bottom: 2px solid var(--border); padding: 5px 20px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box; }
+        @media(min-width: 750px) { header { flex-direction: row; justify-content: space-between; align-items: center; height: 75px; } }
+        .header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .brand { font-size: 1.3rem; font-weight: 900; color: var(--primary); }
+        .toggle-group { display: flex; background: #f1f5f9; padding: 3px; border-radius: 12px; border: 2px solid var(--border); }
+        .toggle-btn { padding: 6px 14px; border: none; background: transparent; font-weight: 800; font-size: 0.9rem; border-radius: 8px; cursor: pointer; color: #64748b; transition: all 0.15s; }
+        .toggle-btn.active { background: var(--primary); color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        #pop-adult.active { background: #0284c7; } #pop-child.active { background: #eab308; }
+        .ed-toggle { border-color: var(--border); } .ed-toggle.active { background: var(--editor-color); color: white; }
+        .search-container { padding: 8px 20px; background: var(--card-bg); border-bottom: 2px solid var(--border); }
+        .search-input { width: 100%; padding: 10px; border: 2px solid var(--border); border-radius: 10px; font-size: 1rem; font-weight: 700; box-sizing: border-box; }
+        .search-input:focus { border-color: var(--primary); outline: none; }
+        #adminPanel { background: var(--editor-light); padding: 12px 20px; border-bottom: 3px solid var(--editor-color); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; box-sizing: border-box; }
+        .admin-input { padding: 8px 12px; border: 2px solid var(--border); border-radius: 8px; font-weight: 600; font-size: 0.95rem; }
+        .admin-input:focus { outline: none; border-color: var(--editor-color); }
+        .admin-btn { background: var(--editor-color); color: white; border: none; padding: 8px 16px; font-weight: 800; border-radius: 8px; cursor: pointer; }
+        .reset-btn { background: #64748b; margin-left: auto; }
+        #sentenceBar { background: var(--card-bg); border-bottom: 2px solid var(--border); padding: 10px 20px; display: flex; gap: 12px; align-items: center; min-height: 75px; box-sizing: border-box; }
+        .sentence-display { flex: 1; background: var(--bg); border: 2px dashed var(--border); border-radius: 14px; min-height: 50px; display: flex; align-items: center; padding: 4px 12px; gap: 8px; overflow-x: auto; }
+        .phrase-chip { background: var(--primary-light); color: var(--primary); padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 1rem; display: flex; align-items: center; gap: 6px; }
+        .phrase-chip .remove-x { cursor: pointer; font-weight: 900; color: #38bdf8; }
+        .action-btn { background: #10b981; color: white; border: none; padding: 0 20px; border-radius: 10px; font-weight: 800; cursor: pointer; font-size: 1rem; height: 50px; }
+        .clear-btn { background: #64748b; }
+        .workspace { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 150px; background: var(--card-bg); border-right: 2px solid var(--border); display: flex; flex-direction: column; gap: 8px; padding: 12px 6px; overflow-y: auto; }
+        .cat-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px; border: 2px solid var(--border); border-radius: 14px; background: #f8fafc; cursor: pointer; font-size: 0.9rem; font-weight: 800; color: #475569; gap: 4px; }
+        .cat-btn.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+        #cat-urgent.active { background: #fee2e2; border-color: var(--urgent-color); color: var(--urgent-color); }
+        .grid-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; justify-content: space-between; }
+        .aac-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); gap: 15px; flex: 1; max-height: 480px; }
+        .aac-card { background: var(--card-bg); border: 3px solid var(--border); border-radius: 20px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; aspect-ratio: 1 / 1; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.01); text-align: center; box-sizing: border-box; position: relative; }
+        .aac-card:active { transform: scale(0.95); }
+        .del-badge { position: absolute; top: -6px; right: -6px; background: var(--urgent-color); color: white; width: 24px; height: 24px; border-radius: 50%; font-weight: 900; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); cursor: pointer; z-index: 10; }
+        .aac-image { width: 70%; height: 70%; object-fit: contain; pointer-events: none; }
+        .aac-label { font-size: 1.1rem; font-weight: 900; line-height: 1.2; margin-top: 4px; }
+        .pagination-bar { display: flex; justify-content: center; align-items: center; gap: 20px; padding-top: 10px; border-top: 2px solid #e2e8f0; }
+        .page-btn { background: var(--card-bg); border: 2px solid var(--border); padding: 10px 20px; border-radius: 10px; font-weight: 800; cursor: pointer; }
+        .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .page-info { font-weight: 800; color: #475569; }
+    </style>
 </head>
 <body>
-
-<div class="container">
-
-  <h1>🎤 Voice Recorder & Modifier</h1>
-
-  <button class="start" onclick="startRecording()">Start Recording</button>
-  <button class="stop" onclick="stopRecording()">Stop Recording</button>
-  <button class="play" onclick="playModifiedAudio()">Play Modified Voice</button>
-
-  <audio id="audioPlayback" controls></audio>
-
-  <div class="controls">
-
-    <label>
-      Playback Speed:
-      <span class="value" id="rateValue">1</span>x
-    </label>
-    <input type="range" id="rate" min="0.5" max="3" step="0.1" value="1">
-
-    <label>
-      Pitch:
-      <span class="value" id="pitchValue">1</span>x
-    </label>
-    <input type="range" id="pitch" min="0.5" max="2" step="0.1" value="1">
-
-    <label>
-      Volume:
-      <span class="value" id="volumeValue">1</span>x
-    </label>
-    <input type="range" id="volume" min="0" max="3" step="0.1" value="1">
-
-    <label>
-      Delay Effect:
-      <span class="value" id="delayValue">0</span> sec
-    </label>
-    <input type="range" id="delay" min="0" max="2" step="0.1" value="0">
-
-  </div>
-
-</div>
-
+    <header>
+        <div class="header-left">
+            <div class="brand">HearLink <span id="brandSub" style="font-weight:400; color:#64748b;">Context AAC</span></div>
+            <div class="toggle-group">
+                <button id="pop-adult" class="toggle-btn active" onclick="setPopulation('adult')">वयस्क (Adult)</button>
+                <button id="pop-child" class="toggle-btn" onclick="setPopulation('child')">बच्चे (Child)</button>
+            </div>
+            <button id="btnEditorToggle" class="toggle-btn ed-toggle" onclick="toggleEditorMode()">⚙️ संपादक मोड</button>
+        </div>
+        <div class="toggle-group">
+            <button id="tier-basic" class="toggle-btn active" onclick="setCommunicationTier('basic')">सरल मोड</button>
+            <button id="tier-advanced" class="toggle-btn" onclick="setCommunicationTier('advanced')">बातचीत मोड</button>
+        </div>
+    </header>
+    <div id="adminPanel" style="display: none;">
+        <span style="font-weight:800; color:var(--editor-color);">➕ नया सिम्बल:</span>
+        <input type="text" id="addFileName" class="admin-input" placeholder="फ़ाइल आईडी">
+        <input type="text" id="addHindiLabel" class="admin-input" placeholder="हिंदी नाम">
+        <select id="addChildType" class="admin-input" style="display:none;">
+            <option value="noun">Noun (पीला)</option><option value="verb">Verb (हरा)</option>
+            <option value="descriptor">Modifier (नीला)</option><option value="social">Social (सफ़ेद)</option>
+        </select>
+        <button class="admin-btn" onclick="addNewItem()">सुरक्षित करें</button>
+        <button class="admin-btn reset-btn" onclick="resetToFactoryBaseline()">Reset Data</button>
+    </div>
+    <div class="search-container"><input type="text" id="searchInput" class="search-input" placeholder="पूरे 1000+ सिम्बल्स में खोजें..." oninput="handleSearch()"></div>
+    <div id="sentenceBar" style="display: none;">
+        <button class="action-btn clear-btn" onclick="clearSentence()">हटाएं</button>
+        <div id="sentenceDisplay" class="sentence-display"></div>
+        <button class="action-btn" onclick="speakSentence()">🗣️ वाक्य बोलें</button>
+    </div>
+    <div class="workspace">
+        <div class="sidebar" id="categorySidebar"></div>
+        <div class="grid-container">
+            <div class="aac-grid" id="aacGrid"></div>
+            <div class="pagination-bar" id="paginationWrapper">
+                <button class="page-btn" id="prevPageBtn" onclick="changePage(-1)">पिछला</button>
+                <span class="page-info" id="pageInfo">पेज 1 of 1</span>
+                <button class="page-btn" id="nextPageBtn" onclick="changePage(1)">अगला</button>
+            </div>
+        </div>
+    </div>
 <script>
+    let activePopulation = 'adult'; let activeCommunicationTier = 'basic'; 
+    let currentCategory = 'urgent'; let activeItemsList = [];
+    let currentPage = 1; let structuralSentence = []; let isEditorModeActive = false;
+    const itemsPerPage = 8; 
 
-let mediaRecorder;
-let audioChunks = [];
-let audioBlob;
-let audioURL;
+    const childCore = [
+        { file: "Help_6241", hindi: "मदद", type: "social", core: true },
+        { file: "Please give me_6394", hindi: "चाहिए", type: "verb", core: true },
+        { file: "More_6406", hindi: "और", type: "descriptor", core: true },
+        { file: "I am all done_6398", hindi: "खत्म", type: "social", core: true }
+    ];
 
-const audioElement = document.getElementById("audioPlayback");
+    const adultCategories = {
+        urgent: { label: "ज़रूरी / दर्द", icon: "🚨" }, dining: { label: "भोजन समय", icon: "🍽️" },
+        care: { label: "दिनचर्या", icon: "🧼" }, social: { label: "बातचीत", icon: "💬" },
+        therapy: { label: "चिकित्सा", icon: "🏥" }, home: { label: "घर पर", icon: "🏠" }
+    };
+    const childFringeCategories = { toys: { label: "खिलौने", icon: "🧸" }, food: { label: "खाना", icon: "🍎" }, play: { label: "क्रियाएं", icon: "🏃" }, feelings: { label: "भावनाएं", icon: "😄" } };
 
-const rateSlider = document.getElementById("rate");
-const pitchSlider = document.getElementById("pitch");
-const volumeSlider = document.getElementById("volume");
-const delaySlider = document.getElementById("delay");
+    const defaultMasterCorpus = """
 
-rateSlider.oninput = () => {
-  document.getElementById("rateValue").innerText = rateSlider.value;
-};
+html_boilerplate_back = """
+    
+    let masterCorpus = JSON.parse(localStorage.getItem('hearlink_master_corpus')) || defaultMasterCorpus;
 
-pitchSlider.oninput = () => {
-  document.getElementById("pitchValue").innerText = pitchSlider.value;
-};
+    function saveCorpusToDisk() { localStorage.setItem('hearlink_master_corpus', JSON.stringify(masterCorpus)); }
+    function initSystem() { renderSidebar(); filterDataCorpus(); }
 
-volumeSlider.oninput = () => {
-  document.getElementById("volumeValue").innerText = volumeSlider.value;
-};
+    function renderSidebar() {
+        const sidebar = document.getElementById('categorySidebar'); sidebar.innerHTML = '';
+        const sourceLayout = (activePopulation === 'adult') ? adultCategories : childFringeCategories;
+        Object.keys(sourceLayout).forEach(key => {
+            const cat = sourceLayout[key];
+            const btn = document.createElement('button'); btn.className = `cat-btn ${currentCategory === key ? 'active' : ''}`;
+            btn.onclick = () => { currentCategory = key; document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); document.getElementById('searchInput').value = ''; currentPage = 1; filterDataCorpus(); };
+            btn.innerHTML = `<span style="font-size:1.4rem;">${cat.icon}</span><span>${cat.label}</span>`;
+            sidebar.appendChild(btn);
+        });
+    }
 
-delaySlider.oninput = () => {
-  document.getElementById("delayValue").innerText = delaySlider.value;
-};
+    function filterDataCorpus() {
+        const searchText = document.getElementById('searchInput').value.trim().toLowerCase();
+        if (activePopulation === 'adult') {
+            let base = masterCorpus.filter(item => item.cat_adult);
+            if (searchText) {
+                activeItemsList = base.filter(item => item.hindi.toLowerCase().includes(searchText) || item.file.toLowerCase().includes(searchText));
+            } else {
+                activeItemsList = base.filter(item => item.cat_adult === currentCategory);
+            }
+        } else {
+            let base = masterCorpus.filter(item => item.cat_child);
+            if (searchText) {
+                activeItemsList = base.filter(item => item.hindi.toLowerCase().includes(searchText) || item.file.toLowerCase().includes(searchText));
+            } else {
+                activeItemsList = base.filter(item => item.cat_child === currentCategory);
+            }
+        }
+        renderGridDisplay();
+    }
 
-async function startRecording() {
+    function renderGridDisplay() {
+        const grid = document.getElementById('aacGrid'); grid.innerHTML = ''; let displaySet = [];
+        if (activePopulation === 'adult') {
+            document.getElementById('paginationWrapper').style.display = 'flex';
+            const totalItems = activeItemsList.length; const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            displaySet = activeItemsList.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+            document.getElementById('pageInfo').textContent = `पेज ${currentPage} of ${totalPages}`;
+            document.getElementById('prevPageBtn').disabled = (currentPage === 1); document.getElementById('nextPageBtn').disabled = (currentPage === totalPages);
+        } else {
+            document.getElementById('paginationWrapper').style.display = 'flex';
+            const totalItems = activeItemsList.length; const totalPages = Math.ceil(totalItems / 4) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            let fringeSlice = activeItemsList.slice((currentPage - 1) * 4, currentPage * 4);
+            displaySet = [...childCore, ...fringeSlice];
+            document.getElementById('pageInfo').textContent = `पेज ${currentPage} of ${totalPages}`;
+            document.getElementById('prevPageBtn').disabled = (currentPage === 1); document.getElementById('nextPageBtn').disabled = (currentPage === totalPages);
+        }
+        displaySet.forEach(item => {
+            const card = document.createElement('div'); card.className = 'aac-card';
+            if (activePopulation === 'child') {
+                if (item.type === 'social') card.style.backgroundColor = 'var(--fitz-social)';
+                if (item.type === 'verb') card.style.backgroundColor = 'var(--fitz-verb)';
+                if (item.type === 'descriptor') card.style.backgroundColor = 'var(--fitz-descriptor)';
+                if (item.type === 'noun') card.style.backgroundColor = 'var(--fitz-noun)';
+            }
+            if (isEditorModeActive && !item.core) {
+                const delBadge = document.createElement('div'); delBadge.className = 'del-badge'; delBadge.textContent = '×';
+                delBadge.onclick = (e) => { e.stopPropagation(); deleteItemFromCorpus(item.file); };
+                card.appendChild(delBadge);
+            }
+            const folderPrefix = "idc_symbols"; const imageSrc = `./${folderPrefix}/${encodeURIComponent(item.file.trim())}.svg`;
+            card.onclick = () => handleCardClick(item.hindi);
+            card.innerHTML += `<img class="aac-image" src="${imageSrc}" onerror="handleImgError(this)" alt="${item.hindi}"><div class="aac-label">${item.hindi}</div>`;
+            grid.appendChild(card);
+        });
+    }
 
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    function handleImgError(imgElement) { imgElement.style.display = 'none'; const fallback = document.createElement('div'); fallback.style.fontSize = '2.3rem'; fallback.style.color = '#cbd5e1'; fallback.style.height = '70%'; fallback.style.display = 'flex'; fallback.style.alignItems = 'center'; fallback.style.justifyContent = 'center'; fallback.textContent = (activePopulation === 'adult') ? '🖼️' : '🎨'; imgElement.parentNode.insertBefore(fallback, imgElement); }
+    function toggleEditorMode() { isEditorModeActive = !isEditorModeActive; document.getElementById('btnEditorToggle').classList.toggle('active', isEditorModeActive); document.getElementById('adminPanel').style.display = isEditorModeActive ? 'flex' : 'none'; renderGridDisplay(); }
+    
+    function addNewItem() {
+        const fileId = document.getElementById('addFileName').value.trim(); const hindiLabel = document.getElementById('addHindiLabel').value.trim(); const childType = document.getElementById('addChildType').value;
+        if (!fileId || !hindiLabel) { alert("Missing fields"); return; }
+        masterCorpus.push({ file: fileId, hindi: hindiLabel, cat_adult: currentCategory, cat_child: currentCategory, type: childType });
+        saveCorpusToDisk(); document.getElementById('addFileName').value = ''; document.getElementById('addHindiLabel').value = ''; filterDataCorpus();
+    }
+    function deleteItemFromCorpus(fileId) { if (confirm("Delete symbol?")) { masterCorpus = masterCorpus.filter(item => item.file !== fileId); saveCorpusToDisk(); filterDataCorpus(); } }
+    function resetToFactoryBaseline() { if (confirm("Reset layout data?")) { localStorage.removeItem('hearlink_master_corpus'); location.reload(); } }
 
-  mediaRecorder = new MediaRecorder(stream);
+    function handleCardClick(word) { if (activeCommunicationTier === 'basic') { executeAcousticFeedback(word); } else { structuralSentence.push(word); renderSentenceDisplay(); } }
+    function renderSentenceDisplay() { const display = document.getElementById('sentenceDisplay'); display.innerHTML = ''; structuralSentence.forEach((word, idx) => { const chip = document.createElement('div'); chip.className = 'phrase-chip'; chip.innerHTML = `<span>${word}</span><span class="remove-x" onclick="removeToken(${idx}, event)">×</span>`; display.appendChild(chip); }); }
+    function removeToken(idx, e) { e.stopPropagation(); structuralSentence.splice(idx, 1); renderSentenceDisplay(); }
+    function clearSentence() { structuralSentence = []; document.getElementById('sentenceDisplay').innerHTML = ''; }
+    function speakSentence() { if (structuralSentence.length === 0) return; executeAcousticFeedback(structuralSentence.join(' ')); }
 
-  audioChunks = [];
+    function executeAcousticFeedback(phrase) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); 
+            
+            // Text Pre-Processor: Drops mixed Roman letters from the spoken token 
+            // string dynamically before execution, forcing native dialect lock
+            let nativeText = phrase.replace(/[A-Za-z]/g, '').replace(/[\\/\\(\\)]/g, ' ').replace(/\\s+/g, ' ').trim();
+            if (!nativeText) nativeText = phrase; 
 
-  mediaRecorder.ondataavailable = event => {
-    audioChunks.push(event.data);
-  };
+            const utterance = new SpeechSynthesisUtterance(nativeText); 
+            utterance.volume = 1.0;
+            
+            if (activePopulation === 'adult') { 
+                utterance.rate = 0.70; utterance.pitch = 1.0; 
+            } else { 
+                utterance.rate = 0.72; utterance.pitch = 1.25; 
+            }
+            
+            const findTrueHindiVoice = () => {
+                const voices = window.speechSynthesis.getVoices();
+                let voice = voices.find(v => v.lang === 'hi-IN' || v.lang === 'hi_IN');
+                if (!voice) voice = voices.find(v => v.name.includes('Google हिन्दी'));
+                if (!voice) {
+                    voice = voices.find(v => v.name.toLowerCase().includes('hindi') || v.name.toLowerCase().includes('india'));
+                }
+                return voice;
+            };
 
-  mediaRecorder.onstop = () => {
+            const targetVoice = findTrueHindiVoice();
+            if (targetVoice) utterance.voice = targetVoice; 
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+    function changePage(dir) { currentPage += dir; renderGridDisplay(); }
+    function handleSearch() { currentPage = 1; filterDataCorpus(); }
+    function setPopulation(pop) { activePopulation = pop; document.getElementById('pop-adult').classList.toggle('active', pop === 'adult'); document.getElementById('pop-child').classList.toggle('active', pop === 'child'); document.getElementById('addChildType').style.display = (pop === 'child') ? 'inline-block' : 'none'; document.getElementById('brandSub').textContent = (pop === 'adult') ? "Context AAC" : "Child Development"; currentCategory = (pop === 'adult') ? 'urgent' : 'toys'; currentPage = 1; document.getElementById('searchInput').value = ''; initSystem(); }
+    function setCommunicationTier(t) { activeCommunicationTier = t; document.getElementById('tier-basic').classList.toggle('active', t === 'basic'); document.getElementById('tier-advanced').classList.toggle('active', t === 'advanced'); document.getElementById('sentenceBar').style.display = (t === 'advanced') ? 'flex' : 'none'; clearSentence(); }
 
-    audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-
-    audioURL = URL.createObjectURL(audioBlob);
-
-    audioElement.src = audioURL;
-  };
-
-  mediaRecorder.start();
-
-  alert("Recording Started");
-}
-
-function stopRecording() {
-
-  mediaRecorder.stop();
-
-  alert("Recording Stopped");
-}
-
-async function playModifiedAudio() {
-
-  if (!audioBlob) {
-    alert("Please record audio first");
-    return;
-  }
-
-  const audioContext = new AudioContext();
-
-  const arrayBuffer = await audioBlob.arrayBuffer();
-
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-  const source = audioContext.createBufferSource();
-
-  source.buffer = audioBuffer;
-
-  // Playback Speed
-  source.playbackRate.value = parseFloat(rateSlider.value);
-
-  // Pitch
-  source.detune.value = (parseFloat(pitchSlider.value) - 1) * 1200;
-
-  // Volume
-  const gainNode = audioContext.createGain();
-  gainNode.gain.value = parseFloat(volumeSlider.value);
-
-  // Delay
-  const delayNode = audioContext.createDelay(5.0);
-  delayNode.delayTime.value = parseFloat(delaySlider.value);
-
-  source.connect(gainNode);
-  gainNode.connect(delayNode);
-  delayNode.connect(audioContext.destination);
-
-  source.start(0);
-}
-
+    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = () => { initSystem(); };
+    }
+    window.onload = initSystem;
 </script>
-
 </body>
 </html>
+"""
+
+print("Compiling flawless production HTML maps...")
+final_output = html_boilerplate_front + json_corpus_string + html_boilerplate_back
+
+with open(output_html, "w", encoding="utf-8") as out:
+    out.write(final_output)
+
+print("=" * 60)
+print(" SUCCESS! Native Hindi alignment script compiled successfully.")
+print(" Commit and save directly on GitHub now!")
+print("=" * 60)
